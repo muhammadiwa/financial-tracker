@@ -19,8 +19,19 @@ import { formatCurrency } from "@/lib/utils"
 import { useToast } from "@/components/ui/use-toast"
 import Link from "next/link"
 
+type TransactionType = "income" | "expense";
+
+interface Transaction {
+  id: string;
+  amount: number;
+  type: TransactionType;
+  category: string;
+  description: string;
+  date: string;
+}
+
 // Sample data
-const sampleTransactions = [
+const sampleTransactions: Transaction[] = [
   {
     id: "1",
     amount: 1500000,

@@ -21,6 +21,7 @@ export function TransactionCard({ id, amount, type, category, description, date,
   const formattedDate = new Date(date).toLocaleDateString("id-ID", {
     day: "numeric",
     month: "short",
+    year: "numeric",
   })
 
   return (

@@ -14,6 +14,9 @@ import { DateRangePicker } from "@/components/date-range-picker"
 import { Breadcrumb } from "@/components/breadcrumb"
 import { formatCurrency } from "@/lib/utils"
 import { useToast } from "@/components/ui/use-toast"
+import { format, parseISO } from "date-fns"
+import { id } from "date-fns/locale"
+import { groupTransactionsByDate } from "@/lib/utils"
 
 // Sample data
 const sampleTransactions = [
@@ -195,21 +198,13 @@ export default function TransactionsPage() {
 
   const balance = totalIncome - totalExpense
 
+  const groupedTransactions = groupTransactionsByDate(filteredTransactions)
+
   return (
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-30 bg-background border-b">
         <div className="flex items-center justify-between h-14 px-4">
           <h1 className="text-lg font-bold lg:hidden">Transaksi</h1>
-          <div className="ml-auto flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={handleExport}>
-              <Download className="h-4 w-4 mr-1" />
-              <span className="hidden sm:inline">Ekspor</span>
-            </Button>
-            <Button onClick={() => router.push("/add-transaction")}>
-              <Plus className="h-4 w-4 mr-1" />
-              <span className="hidden sm:inline">Tambah</span>
-            </Button>
-          </div>
         </div>
       </header>
 
@@ -289,6 +284,12 @@ export default function TransactionsPage() {
             </div>
 
             <div className="flex gap-2">
+              {/* Added Export button here */}
+              <Button variant="outline" size="icon" onClick={handleExport}>
+                <Download className="h-4 w-4" />
+                <span className="sr-only">Ekspor</span>
+              </Button>
+
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" size="icon">
@@ -350,10 +351,25 @@ export default function TransactionsPage() {
         </div>
 
         {/* Transaction List */}
-        <div className="space-y-4">
-          {filteredTransactions.length > 0 ? (
-            filteredTransactions.map((transaction) => (
-              <TransactionCard key={transaction.id} {...transaction} onEdit={handleEdit} onDelete={handleDelete} />
+        <div className="space-y-6">
+          {Object.keys(groupedTransactions).length > 0 ? (
+            Object.entries(groupedTransactions).map(([date, transactions]: [string, any[]]) => (
+              <div key={date} className="space-y-4">
+                <div className="sticky top-14 z-20 -mx-4 px-4 py-2 bg-muted/50 backdrop-blur-sm">
+                  <h2 className="text-sm font-medium text-muted-foreground">{date}</h2>
+                </div>
+                <div className="space-y-4">
+                  {transactions.map((transaction) => (
+                    <TransactionCard
+                      key={transaction.id}
+                      {...transaction}
+                      onClick={() => router.push(`/transactions/${transaction.id}`)}
+                      onEdit={handleEdit}
+                      onDelete={handleDelete}
+                    />
+                  ))}
+                </div>
+              </div>
             ))
           ) : (
             <div className="text-center py-12">

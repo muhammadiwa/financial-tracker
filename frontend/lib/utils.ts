@@ -1,5 +1,7 @@
 import { type ClassValue, clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
+import { format, parseISO } from "date-fns"
+import { id } from "date-fns/locale"
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -40,5 +42,16 @@ export function getRandomColor(index: number): string {
     "bg-cyan-500",
   ]
   return colors[index % colors.length]
+}
+
+export function groupTransactionsByDate(transactions: any[]) {
+  return transactions.reduce((groups: any, transaction) => {
+    const date = format(parseISO(transaction.date), "d MMMM yyyy", { locale: id })
+    if (!groups[date]) {
+      groups[date] = []
+    }
+    groups[date].push(transaction)
+    return groups
+  }, {})
 }
 
