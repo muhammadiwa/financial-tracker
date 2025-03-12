@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useToast } from "@/components/ui/use-toast"
 import { Breadcrumb } from "@/components/breadcrumb"
+import { HeaderMenu } from "@/components/header-menu"
 
 // Sample categories
 const incomeCategories = ["Gaji", "Freelance", "Investasi", "Hadiah", "Lainnya"]
@@ -55,8 +56,9 @@ export default function AddTransactionPage() {
   return (
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-30 bg-background border-b">
-        <div className="flex items-center h-14 px-4">
+        <div className="flex items-center justify-between h-14 px-4">
           <h1 className="text-lg font-bold lg:hidden">Tambah Transaksi</h1>
+          <HeaderMenu />
         </div>
       </header>
 

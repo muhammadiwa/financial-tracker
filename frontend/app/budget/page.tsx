@@ -31,6 +31,7 @@ import { Progress } from "@/components/ui/progress"
 import { Breadcrumb } from "@/components/breadcrumb"
 import { formatCurrency } from "@/lib/utils"
 import { useToast } from "@/components/ui/use-toast"
+import { HeaderMenu } from "@/components/header-menu"
 
 // Sample categories
 const sampleCategories = [
@@ -223,87 +224,7 @@ export default function BudgetPage() {
       <header className="sticky top-0 z-30 bg-background border-b">
         <div className="flex items-center justify-between h-14 px-4">
           <h1 className="text-lg font-bold lg:hidden">Anggaran</h1>
-          <div className="ml-auto">
-            <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-              <DialogTrigger asChild>
-                <Button>
-                  <Plus className="h-4 w-4 mr-1" />
-                  <span className="hidden sm:inline">Tambah Anggaran</span>
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Tambah Anggaran Baru</DialogTitle>
-                  <DialogDescription>Buat anggaran baru untuk kategori pengeluaran Anda</DialogDescription>
-                </DialogHeader>
-                <div className="grid gap-4 py-4">
-                  <div className="grid gap-2">
-                    <label htmlFor="category" className="text-sm font-medium">
-                      Kategori
-                    </label>
-                    <Select
-                      value={newBudget.category}
-                      onValueChange={(value) => setNewBudget({ ...newBudget, category: value })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Pilih kategori" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {sampleCategories.map((category) => (
-                          <SelectItem key={category.id} value={category.name}>
-                            <div className="flex items-center">
-                              <div className="w-3 h-3 rounded-full mr-2" style={{ backgroundColor: category.color }} />
-                              <span>{category.name}</span>
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="grid gap-2">
-                    <label htmlFor="amount" className="text-sm font-medium">
-                      Jumlah Anggaran
-                    </label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-3 text-muted-foreground">Rp</span>
-                      <Input
-                        id="amount"
-                        type="number"
-                        value={newBudget.amount}
-                        onChange={(e) => setNewBudget({ ...newBudget, amount: e.target.value })}
-                        className="pl-10"
-                        placeholder="0"
-                      />
-                    </div>
-                  </div>
-                  <div className="grid gap-2">
-                    <label htmlFor="period" className="text-sm font-medium">
-                      Periode
-                    </label>
-                    <Select
-                      value={newBudget.period}
-                      onValueChange={(value) => setNewBudget({ ...newBudget, period: value })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Pilih periode" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="weekly">Mingguan</SelectItem>
-                        <SelectItem value="monthly">Bulanan</SelectItem>
-                        <SelectItem value="yearly">Tahunan</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
-                    Batal
-                  </Button>
-                  <Button onClick={handleAddBudget}>Simpan</Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-          </div>
+          <HeaderMenu />
         </div>
       </header>
 

@@ -20,6 +20,7 @@ import {
   Sector,
 } from "recharts"
 import { Breadcrumb } from "@/components/breadcrumb"
+import { HeaderMenu } from "@/components/header-menu"
 
 // Sample data
 const expenseByCategory = [
@@ -81,8 +82,9 @@ export default function StatisticsPage() {
   return (
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-30 bg-background border-b">
-        <div className="flex items-center h-14 px-4">
+        <div className="flex items-center justify-between h-14 px-4">
           <h1 className="text-lg font-bold lg:hidden">Statistik</h1>
+          <HeaderMenu />
         </div>
       </header>
 

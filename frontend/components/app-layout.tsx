@@ -12,7 +12,7 @@ export function AppLayout({ children, showMobileNav = true }: AppLayoutProps) {
   return (
     <div className="min-h-screen bg-background">
       <Sidebar />
-      <div className="lg:ml-[240px] transition-all duration-300 min-h-screen pb-16 lg:pb-0">
+      <div className="lg:ml-[240px] pb-16 lg:pb-0 transition-all duration-300">
         <PageTransition>{children}</PageTransition>
       </div>
       {showMobileNav && <MobileNav />}

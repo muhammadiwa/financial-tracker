@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
+Route::post('/login/{provider}', [AuthController::class, 'socialLogin']);
 
 Route::middleware('auth:api')->group(function () {
     // Categories
@@ -19,8 +20,4 @@ Route::middleware('auth:api')->group(function () {
     // Budgets
     Route::apiResource('budgets', BudgetController::class);
     
-    // Reports
-    Route::get('/reports/expenses', [ReportController::class, 'expenses']);
-    Route::get('/reports/income', [ReportController::class, 'income']);
-    Route::get('/reports/overview', [ReportController::class, 'overview']);
 });

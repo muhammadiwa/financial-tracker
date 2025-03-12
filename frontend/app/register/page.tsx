@@ -10,6 +10,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { useToast } from "@/components/ui/use-toast"
+import axios from 'axios'
+import { Chrome, Facebook } from "lucide-react"
 
 export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false)
@@ -17,22 +19,112 @@ export default function RegisterPage() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState("")
   const router = useRouter()
   const { toast } = useToast()
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
+    setError("")
 
-    // Simulate registration process
-    setTimeout(() => {
-      setIsLoading(false)
-      toast({
-        title: "Pendaftaran berhasil",
-        description: "Silakan masuk dengan akun baru Anda",
+    try {
+        const response = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/register`, {
+            name,
+            email,
+            password,
+        })
+
+        if (response.data.status === 'success') {
+            toast({
+                title: "Pendaftaran berhasil",
+                description: "Silakan masuk dengan akun baru Anda",
+            })
+            router.push("/login")
+        }
+    } catch (error: any) {
+        const message = error.response?.data?.message
+        const errorMessage = typeof message === 'object' 
+            ? Object.values(message).flat()[0] 
+            : message || "Terjadi kesalahan saat mendaftar"
+        
+        setError(errorMessage)
+        toast({
+            variant: "destructive",
+            title: "Pendaftaran gagal",
+            description: errorMessage,
+        })
+    } finally {
+        setIsLoading(false)
+    }
+  }
+
+  const handleGoogleRegister = async () => {
+    try {
+      const googleAuth = await google.accounts.oauth2.initTokenClient({
+        client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID!,
+        scope: 'email profile',
+        callback: async (response) => {
+          try {
+            const result = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/login/google`, {
+              access_token: response.access_token
+            })
+
+            if (result.data.status === 'success') {
+              localStorage.setItem('token', result.data.token)
+              localStorage.setItem('user', JSON.stringify(result.data.user))
+              toast({
+                title: "Pendaftaran berhasil",
+                description: "Selamat datang!",
+              })
+              router.push("/dashboard")
+            }
+          } catch (error: any) {
+            toast({
+              variant: "destructive",
+              title: "Pendaftaran gagal",
+              description: error.response?.data?.message || "Terjadi kesalahan",
+            })
+          }
+        },
       })
-      router.push("/login")
-    }, 1500)
+
+      googleAuth.requestAccessToken()
+    } catch (error) {
+      console.error('Google registration failed:', error)
+    }
+  }
+
+  const handleFacebookRegister = async () => {
+    try {
+      FB.login(async function(response) {
+        if (response.authResponse) {
+          try {
+            const result = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/login/facebook`, {
+              access_token: response.authResponse.accessToken
+            })
+
+            if (result.data.status === 'success') {
+              localStorage.setItem('token', result.data.token)
+              localStorage.setItem('user', JSON.stringify(result.data.user))
+              toast({
+                title: "Pendaftaran berhasil",
+                description: "Selamat datang!",
+              })
+              router.push("/dashboard")
+            }
+          } catch (error: any) {
+            toast({
+              variant: "destructive",
+              title: "Pendaftaran gagal",
+              description: error.response?.data?.message || "Terjadi kesalahan",
+            })
+          }
+        }
+      }, {scope: 'email'})
+    } catch (error) {
+      console.error('Facebook registration failed:', error)
+    }
   }
 
   return (
@@ -108,11 +200,25 @@ export default function RegisterPage() {
             </div>
           </div>
           <div className="grid grid-cols-2 gap-4 mt-2 w-full">
-            <Button variant="outline" className="w-full">
-              Google
+            <Button 
+              variant="outline" 
+              size="icon"
+              className="h-10 w-10 rounded-full"
+              onClick={handleGoogleRegister}
+              disabled={isLoading}
+            >
+              <Chrome className="h-4 w-4" />
+              <span className="sr-only">Daftar dengan Google</span>
             </Button>
-            <Button variant="outline" className="w-full">
-              Facebook
+            <Button 
+              variant="outline" 
+              size="icon"
+              className="h-10 w-10 rounded-full"
+              onClick={handleFacebookRegister}
+              disabled={isLoading}
+            >
+              <Facebook className="h-4 w-4" />
+              <span className="sr-only">Daftar dengan Facebook</span>
             </Button>
           </div>
           <div className="mt-4 text-center text-sm">

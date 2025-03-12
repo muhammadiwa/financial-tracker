@@ -17,6 +17,7 @@ import { useToast } from "@/components/ui/use-toast"
 import { format, parseISO } from "date-fns"
 import { id } from "date-fns/locale"
 import { groupTransactionsByDate } from "@/lib/utils"
+import { HeaderMenu } from "@/components/header-menu"
 
 // Sample data
 const sampleTransactions = [
@@ -205,6 +206,7 @@ export default function TransactionsPage() {
       <header className="sticky top-0 z-30 bg-background border-b">
         <div className="flex items-center justify-between h-14 px-4">
           <h1 className="text-lg font-bold lg:hidden">Transaksi</h1>
+          <HeaderMenu />
         </div>
       </header>
 
@@ -353,24 +355,24 @@ export default function TransactionsPage() {
         {/* Transaction List */}
         <div className="space-y-6">
           {Object.keys(groupedTransactions).length > 0 ? (
-            Object.entries(groupedTransactions).map(([date, transactions]: [string, any[]]) => (
-              <div key={date} className="space-y-4">
-                <div className="sticky top-14 z-20 -mx-4 px-4 py-2 bg-muted/50 backdrop-blur-sm">
-                  <h2 className="text-sm font-medium text-muted-foreground">{date}</h2>
+              Object.entries(groupedTransactions as Record<string, typeof sampleTransactions>).map(([date, transactions]) => (
+                <div key={date} className="space-y-4">
+                  <div className="sticky top-14 z-20 -mx-4 px-4 py-2 bg-muted/50 backdrop-blur-sm">
+                    <h2 className="text-sm font-medium text-muted-foreground">{date}</h2>
+                  </div>
+                  <div className="space-y-4">
+                    {transactions.map((transaction) => (
+                      <TransactionCard
+                        key={transaction.id}
+                        {...transaction}
+                        onClick={() => router.push(`/transactions/${transaction.id}`)}
+                        onEdit={handleEdit}
+                        onDelete={handleDelete}
+                      />
+                    ))}
+                  </div>
                 </div>
-                <div className="space-y-4">
-                  {transactions.map((transaction) => (
-                    <TransactionCard
-                      key={transaction.id}
-                      {...transaction}
-                      onClick={() => router.push(`/transactions/${transaction.id}`)}
-                      onEdit={handleEdit}
-                      onDelete={handleDelete}
-                    />
-                  ))}
-                </div>
-              </div>
-            ))
+              ))
           ) : (
             <div className="text-center py-12">
               <p className="text-muted-foreground">Tidak ada transaksi yang ditemukan</p>

@@ -10,29 +10,94 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { useToast } from "@/components/ui/use-toast"
+import axios from "axios"
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState("")
   const router = useRouter()
   const { toast } = useToast()
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
+    setError("")
 
-    // Simulate login process
-    setTimeout(() => {
-      setIsLoading(false)
-      // For demo purposes, we'll just redirect to dashboard
-      toast({
-        title: "Login berhasil",
-        description: "Selamat datang kembali!",
+    try {
+      const response = await axios.post('http://localhost:8000/api/login', {
+        email,
+        password
       })
-      router.push("/dashboard")
-    }, 1500)
+
+      if (response.data.status === 'success') {
+        // Store token in localStorage
+        localStorage.setItem('token', response.data.token)
+        localStorage.setItem('user', JSON.stringify(response.data.user))
+
+        toast({
+          title: "Login berhasil",
+          description: "Selamat datang kembali!",
+        })
+        router.push("/dashboard")
+      }
+    } catch (error: any) {
+      setError(error.response?.data?.message || "Terjadi kesalahan")
+      toast({
+        variant: "destructive",
+        title: "Login gagal",
+        description: error.response?.data?.message || "Terjadi kesalahan",
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleGoogleLogin = async () => {
+    try {
+      // Initialize Google OAuth
+      const googleAuth = await google.accounts.oauth2.initTokenClient({
+        client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID!,
+        scope: 'email profile',
+        callback: async (response) => {
+          const result = await axios.post('http://localhost:8000/api/login/google', {
+            access_token: response.access_token
+          })
+
+          if (result.data.status === 'success') {
+            localStorage.setItem('token', result.data.token)
+            localStorage.setItem('user', JSON.stringify(result.data.user))
+            router.push("/dashboard")
+          }
+        },
+      })
+
+      googleAuth.requestAccessToken()
+    } catch (error) {
+      console.error('Google login failed:', error)
+    }
+  }
+
+  const handleFacebookLogin = async () => {
+    try {
+      FB.login(async function(response) {
+        if (response.authResponse) {
+          const result = await axios.post('http://localhost:8000/api/login/facebook', {
+            access_token: response.authResponse.accessToken
+          })
+
+          if (result.data.status === 'success') {
+            localStorage.setItem('token', result.data.token)
+            localStorage.setItem('user', JSON.stringify(result.data.user))
+            router.push("/dashboard")
+          }
+        }
+      }, {scope: 'email'})
+    } catch (error) {
+      console.error('Facebook login failed:', error)
+    }
   }
 
   return (
@@ -100,10 +165,20 @@ export default function LoginPage() {
             </div>
           </div>
           <div className="grid grid-cols-2 gap-4 mt-2 w-full">
-            <Button variant="outline" className="w-full">
+            <Button 
+              variant="outline" 
+              className="w-full"
+              onClick={handleGoogleLogin}
+              disabled={isLoading}
+            >
               Google
             </Button>
-            <Button variant="outline" className="w-full">
+            <Button 
+              variant="outline" 
+              className="w-full"
+              onClick={handleFacebookLogin}
+              disabled={isLoading}
+            >
               Facebook
             </Button>
           </div>
