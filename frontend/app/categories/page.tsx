@@ -30,19 +30,10 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Breadcrumb } from "@/components/breadcrumb"
 import { useToast } from "@/components/ui/use-toast"
-
-// Sample categories
-const sampleCategories = [
-  { id: "1", name: "Makanan", type: "expense", color: "#ef4444" },
-  { id: "2", name: "Transportasi", type: "expense", color: "#3b82f6" },
-  { id: "3", name: "Hiburan", type: "expense", color: "#8b5cf6" },
-  { id: "4", name: "Tagihan", type: "expense", color: "#f97316" },
-  { id: "5", name: "Belanja", type: "expense", color: "#10b981" },
-  { id: "6", name: "Gaji", type: "income", color: "#22c55e" },
-  { id: "7", name: "Freelance", type: "income", color: "#06b6d4" },
-  { id: "8", name: "Hadiah", type: "income", color: "#ec4899" },
-  { id: "9", name: "Investasi", type: "income", color: "#f59e0b" },
-]
+import axios from '@/lib/axios'
+import { useEffect } from 'react'
+import { PageWrapper } from "@/components/page-wrapper"
+import { HeaderMenu } from "@/components/header-menu"
 
 // Available colors
 const colorOptions = [
@@ -59,7 +50,13 @@ const colorOptions = [
 ]
 
 export default function CategoriesPage() {
-  const [categories, setCategories] = useState(sampleCategories)
+  interface Category {
+    id: string;
+    name: string;
+    type: string;
+    color: string;
+  }
+  const [categories, setCategories] = useState<Category[]>([])
   const [activeTab, setActiveTab] = useState("all")
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
@@ -79,66 +76,139 @@ export default function CategoriesPage() {
   const router = useRouter()
   const { toast } = useToast()
 
+  // Fetch categories
+  useEffect(() => {
+    fetchCategories()
+  }, [])
+
+  const fetchCategories = async () => {
+    try {
+      const response = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/categories`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('token')}`
+        }
+      })
+      setCategories(response.data.data)
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Gagal memuat kategori"
+      })
+    }
+  }
+
   // Filter categories based on active tab
   const filteredCategories = categories.filter((category) => activeTab === "all" || category.type === activeTab)
 
-  const handleAddCategory = () => {
+  const handleAddCategory = async () => {
     if (!newCategory.name.trim()) {
       toast({
         title: "Nama kategori diperlukan",
         description: "Silakan masukkan nama kategori",
         variant: "destructive",
+        duration: 3000, // Will disappear after 3 seconds
       })
       return
     }
 
-    const id = (categories.length + 1).toString()
-    setCategories([...categories, { id, ...newCategory }])
-    setNewCategory({
-      name: "",
-      type: "expense",
-      color: "#ef4444",
-    })
-    setIsAddDialogOpen(false)
+    try {
+      const response = await axios.post(
+        `${process.env.NEXT_PUBLIC_API_URL}/categories`,
+        newCategory,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('token')}`
+          }
+        }
+      )
 
-    toast({
-      title: "Kategori ditambahkan",
-      description: `Kategori ${newCategory.name} berhasil ditambahkan`,
-    })
+      setCategories([...categories, response.data.data])
+      setNewCategory({
+        name: "",
+        type: "expense",
+        color: "#ef4444",
+      })
+      setIsAddDialogOpen(false)
+
+      toast({
+        title: "Kategori ditambahkan",
+        description: "Kategori berhasil ditambahkan",
+        duration: 3000,
+      })
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Gagal menambahkan kategori",
+        duration: 3000,
+      })
+    }
   }
 
-  const handleEditCategory = () => {
+  const handleEditCategory = async () => {
     if (!editingCategory) return
 
-    if (!editingCategory.name.trim()) {
+    try {
+      const response = await axios.put(
+        `${process.env.NEXT_PUBLIC_API_URL}/categories/${editingCategory.id}`,
+        editingCategory,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('token')}`
+          }
+        }
+      )
+
+      setCategories(categories.map((category) => 
+        category.id === editingCategory.id ? response.data.data : category
+      ))
+      setIsEditDialogOpen(false)
+
       toast({
-        title: "Nama kategori diperlukan",
-        description: "Silakan masukkan nama kategori",
-        variant: "destructive",
+        title: "Kategori diperbarui",
+        description: "Kategori berhasil diperbarui",
+        duration: 3000,
       })
-      return
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Gagal memperbarui kategori",
+        duration: 3000,
+      })
     }
-
-    setCategories(categories.map((category) => (category.id === editingCategory.id ? editingCategory : category)))
-    setIsEditDialogOpen(false)
-
-    toast({
-      title: "Kategori diperbarui",
-      description: `Kategori ${editingCategory.name} berhasil diperbarui`,
-    })
   }
 
-  const handleDeleteCategory = () => {
+  const handleDeleteCategory = async () => {
     if (!deletingCategoryId) return
 
-    const categoryToDelete = categories.find((c) => c.id === deletingCategoryId)
-    setCategories(categories.filter((category) => category.id !== deletingCategoryId))
-    setDeletingCategoryId(null)
+    try {
+      await axios.delete(
+        `${process.env.NEXT_PUBLIC_API_URL}/categories/${deletingCategoryId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('token')}`
+          }
+        }
+      )
 
-    toast({
-      title: "Kategori dihapus",
-      description: `Kategori ${categoryToDelete?.name} berhasil dihapus`,
-    })
+      setCategories(categories.filter((category) => category.id !== deletingCategoryId))
+      setDeletingCategoryId(null)
+
+      toast({
+        title: "Kategori dihapus",
+        description: "Kategori berhasil dihapus",
+        duration: 3000,
+      })
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Gagal menghapus kategori",
+        duration: 3000,
+      })
+    }
   }
 
   const openEditDialog = (category: (typeof categories)[0]) => {
@@ -147,107 +217,125 @@ export default function CategoriesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-30 bg-background border-b">
+    <PageWrapper
+      header={
         <div className="flex items-center justify-between h-14 px-4">
           <h1 className="text-lg font-bold lg:hidden">Kategori</h1>
-          <div className="ml-auto">
-            <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-              <DialogTrigger asChild>
-                <Button>
-                  <Plus className="h-4 w-4 mr-1" />
-                  <span className="hidden sm:inline">Tambah Kategori</span>
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Tambah Kategori Baru</DialogTitle>
-                  <DialogDescription>Buat kategori baru untuk transaksi Anda</DialogDescription>
-                </DialogHeader>
-                <div className="grid gap-4 py-4">
-                  <div className="grid gap-2">
-                    <label htmlFor="name" className="text-sm font-medium">
-                      Nama Kategori
-                    </label>
-                    <Input
-                      id="name"
-                      value={newCategory.name}
-                      onChange={(e) => setNewCategory({ ...newCategory, name: e.target.value })}
-                      placeholder="Masukkan nama kategori"
-                    />
-                  </div>
-                  <div className="grid gap-2">
-                    <label htmlFor="type" className="text-sm font-medium">
-                      Tipe Kategori
-                    </label>
-                    <Select
-                      value={newCategory.type}
-                      onValueChange={(value) => setNewCategory({ ...newCategory, type: value })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Pilih tipe kategori" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="expense">Pengeluaran</SelectItem>
-                        <SelectItem value="income">Pemasukan</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="grid gap-2">
-                    <label htmlFor="color" className="text-sm font-medium">
-                      Warna
-                    </label>
-                    <Select
-                      value={newCategory.color}
-                      onValueChange={(value) => setNewCategory({ ...newCategory, color: value })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Pilih warna">
-                          <div className="flex items-center">
-                            <div className="w-4 h-4 rounded-full mr-2" style={{ backgroundColor: newCategory.color }} />
-                            <span>{colorOptions.find((c) => c.value === newCategory.color)?.label}</span>
-                          </div>
-                        </SelectValue>
-                      </SelectTrigger>
-                      <SelectContent>
-                        {colorOptions.map((color) => (
-                          <SelectItem key={color.value} value={color.value}>
-                            <div className="flex items-center">
-                              <div className="w-4 h-4 rounded-full mr-2" style={{ backgroundColor: color.value }} />
-                              <span>{color.label}</span>
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
-                    Batal
-                  </Button>
-                  <Button onClick={handleAddCategory}>Simpan</Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-          </div>
+          <HeaderMenu />
         </div>
-      </header>
-
-      <main className="container px-4 py-6">
+      }
+    >
+      <div className="flex items-center justify-between mb-6">
         <Breadcrumb />
+        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+          <DialogTrigger asChild>
+            <Button className="shadow-sm hover:shadow-md transition-shadow">
+              <Plus className="h-4 w-4 mr-2" />
+              Tambah Kategori
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Tambah Kategori Baru</DialogTitle>
+              <DialogDescription>Buat kategori baru untuk transaksi Anda</DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <label htmlFor="name" className="text-sm font-medium">
+                  Nama Kategori
+                </label>
+                <Input
+                  id="name"
+                  value={newCategory.name}
+                  onChange={(e) => setNewCategory({ ...newCategory, name: e.target.value })}
+                  placeholder="Masukkan nama kategori"
+                />
+              </div>
+              <div className="grid gap-2">
+                <label htmlFor="type" className="text-sm font-medium">
+                  Tipe Kategori
+                </label>
+                <Select
+                  value={newCategory.type}
+                  onValueChange={(value) => setNewCategory({ ...newCategory, type: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Pilih tipe kategori" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="expense">Pengeluaran</SelectItem>
+                    <SelectItem value="income">Pemasukan</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid gap-2">
+                <label htmlFor="color" className="text-sm font-medium">
+                  Warna
+                </label>
+                <Select
+                  value={newCategory.color}
+                  onValueChange={(value) => setNewCategory({ ...newCategory, color: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Pilih warna">
+                      <div className="flex items-center">
+                        <div className="w-4 h-4 rounded-full mr-2" style={{ backgroundColor: newCategory.color }} />
+                        <span>{colorOptions.find((c) => c.value === newCategory.color)?.label}</span>
+                      </div>
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {colorOptions.map((color) => (
+                      <SelectItem key={color.value} value={color.value}>
+                        <div className="flex items-center">
+                          <div className="w-4 h-4 rounded-full mr-2" style={{ backgroundColor: color.value }} />
+                          <span>{color.label}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
+                Batal
+              </Button>
+              <Button onClick={handleAddCategory}>Simpan</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full mb-6">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="all">Semua</TabsTrigger>
-            <TabsTrigger value="income">Pemasukan</TabsTrigger>
-            <TabsTrigger value="expense">Pengeluaran</TabsTrigger>
-          </TabsList>
-        </Tabs>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full mb-6">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="all">Semua</TabsTrigger>
+          <TabsTrigger value="income">Pemasukan</TabsTrigger>
+          <TabsTrigger value="expense">Pengeluaran</TabsTrigger>
+        </TabsList>
+      </Tabs>
 
+      {/* Empty state with improved styling */}
+      {filteredCategories.length === 0 && (
+        <div className="flex flex-col items-center justify-center py-12 px-4">
+          <div className="bg-muted/50 p-4 rounded-full mb-4">
+            <Tag className="h-8 w-8 text-muted-foreground" />
+          </div>
+          <h3 className="text-lg font-medium mb-2">Tidak ada kategori</h3>
+          <p className="text-muted-foreground text-center mb-6">
+            Mulai dengan menambahkan kategori untuk melacak transaksi Anda
+          </p>
+        </div>
+      )}
+
+      {/* Grid with improved card styling */}
+      {filteredCategories.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredCategories.map((category) => (
-            <Card key={category.id}>
+            <Card 
+              key={category.id}
+              className="hover:shadow-md transition-shadow"
+            >
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center">
@@ -293,22 +381,7 @@ export default function CategoriesPage() {
             </Card>
           ))}
         </div>
-
-        {filteredCategories.length === 0 && (
-          <div className="text-center py-12">
-            <p className="text-muted-foreground">Tidak ada kategori yang ditemukan</p>
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button className="mt-4">
-                  <Plus className="h-4 w-4 mr-1" />
-                  Tambah Kategori
-                </Button>
-              </DialogTrigger>
-              <DialogContent>{/* Dialog content same as above */}</DialogContent>
-            </Dialog>
-          </div>
-        )}
-      </main>
+      )}
 
       {/* Edit Category Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
@@ -385,7 +458,7 @@ export default function CategoriesPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </PageWrapper>
   )
 }
 

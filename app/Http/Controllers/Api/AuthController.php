@@ -28,7 +28,8 @@ class AuthController extends Controller
                 'password' => Hash::make($validatedData['password']),
             ]);
 
-            // Create token after user is created
+            // Default categories will be created automatically via Observer
+
             $token = $user->createToken('auth_token')->plainTextToken;
 
             return response()->json([

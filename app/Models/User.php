@@ -27,4 +27,10 @@ class User extends Authenticatable
         'email_verified_at' => 'datetime',
         'password' => 'hashed',
     ];
+
+    // Add this relationship method
+    public function categories()
+    {
+        return $this->hasMany(Category::class);
+    }
 }

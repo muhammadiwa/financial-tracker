@@ -4,6 +4,8 @@ import { usePathname } from "next/navigation"
 import Link from "next/link"
 import { ChevronRight, Home } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { Buda } from "next/font/google"
+import { tr } from "date-fns/locale"
 
 const routeNameMap: Record<string, string> = {
   dashboard: "Beranda",
@@ -11,6 +13,9 @@ const routeNameMap: Record<string, string> = {
   "add-transaction": "Tambah Transaksi",
   reports: "Laporan",
   settings: "Pengaturan",
+  categories: "Kategori",
+  budget: "Anggaran",
+  transactions: "Transaksi",
 }
 
 export function Breadcrumb() {

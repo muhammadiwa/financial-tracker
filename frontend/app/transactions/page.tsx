@@ -18,6 +18,7 @@ import { format, parseISO } from "date-fns"
 import { id } from "date-fns/locale"
 import { groupTransactionsByDate } from "@/lib/utils"
 import { HeaderMenu } from "@/components/header-menu"
+import axios from '@/lib/axios'
 
 // Sample data
 const sampleTransactions = [

@@ -11,13 +11,14 @@ Route::post('/login', [AuthController::class, 'login']);
 Route::post('/login/{provider}', [AuthController::class, 'socialLogin']);
 
 Route::middleware('auth:api')->group(function () {
-    // Categories
-    Route::apiResource('categories', CategoryController::class);
-    
     // Transactions
     Route::apiResource('transactions', TransactionController::class);
     
     // Budgets
     Route::apiResource('budgets', BudgetController::class);
     
+});
+
+Route::middleware('auth:sanctum')->group(function () {
+    Route::apiResource('categories', CategoryController::class);
 });

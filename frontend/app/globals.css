@@ -55,6 +55,22 @@
     --success: 142.1 70.6% 45.3%;
     --warning: 48 96% 53%;
   }
+
+  body {
+    @apply overflow-x-hidden overscroll-y-none;
+  }
+
+  html {
+    @apply h-full;
+  }
+
+  body {
+    @apply h-full;
+  }
+
+  #root {
+    @apply h-full;
+  }
 }
 
 @layer base {
