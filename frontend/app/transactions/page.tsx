@@ -19,99 +19,92 @@ import { id } from "date-fns/locale"
 import { groupTransactionsByDate } from "@/lib/utils"
 import { HeaderMenu } from "@/components/header-menu"
 import axios from '@/lib/axios'
+import { TransactionDialog } from "@/components/transaction-dialog"
 
-// Sample data
-const sampleTransactions = [
-  {
-    id: "1",
-    amount: 1500000,
-    type: "income",
-    category: "Gaji",
-    description: "Gaji bulan Maret",
-    date: "2023-03-25",
-  },
-  {
-    id: "2",
-    amount: 50000,
-    type: "expense",
-    category: "Makanan",
-    description: "Makan siang",
-    date: "2023-03-26",
-  },
-  {
-    id: "3",
-    amount: 200000,
-    type: "expense",
-    category: "Transportasi",
-    description: "Bensin",
-    date: "2023-03-27",
-  },
-  {
-    id: "4",
-    amount: 300000,
-    type: "income",
-    category: "Freelance",
-    description: "Proyek desain",
-    date: "2023-03-28",
-  },
-  {
-    id: "5",
-    amount: 100000,
-    type: "expense",
-    category: "Hiburan",
-    description: "Nonton bioskop",
-    date: "2023-03-29",
-  },
-  {
-    id: "6",
-    amount: 75000,
-    type: "expense",
-    category: "Makanan",
-    description: "Belanja bulanan",
-    date: "2023-03-30",
-  },
-  {
-    id: "7",
-    amount: 250000,
-    type: "expense",
-    category: "Tagihan",
-    description: "Tagihan internet",
-    date: "2023-03-31",
-  },
-  {
-    id: "8",
-    amount: 500000,
-    type: "income",
-    category: "Hadiah",
-    description: "Bonus kerja",
-    date: "2023-04-01",
-  },
-]
+interface Transaction {
+  id: string;
+  description: string;
+  amount: number;
+  type: 'income' | 'expense';
+  category: string;
+  category_id: string;
+  color: string;
+  date: string;
+}
 
-// Sample categories
-const categories = [
-  { id: "1", name: "Makanan", type: "expense" },
-  { id: "2", name: "Transportasi", type: "expense" },
-  { id: "3", name: "Hiburan", type: "expense" },
-  { id: "4", name: "Tagihan", type: "expense" },
-  { id: "5", name: "Belanja", type: "expense" },
-  { id: "6", name: "Gaji", type: "income" },
-  { id: "7", name: "Freelance", type: "income" },
-  { id: "8", name: "Hadiah", type: "income" },
-  { id: "9", name: "Investasi", type: "income" },
-]
+interface Category {
+  id: string;
+  name: string;
+  type: 'income' | 'expense';
+  color: string;
+}
 
 export default function TransactionsPage() {
-  const [transactions, setTransactions] = useState(sampleTransactions)
-  const [filteredTransactions, setFilteredTransactions] = useState(sampleTransactions)
+  const [transactions, setTransactions] = useState<Transaction[]>([])
+  const [filteredTransactions, setFilteredTransactions] = useState<Transaction[]>([])
+  const [categories, setCategories] = useState<Category[]>([])
   const [activeTab, setActiveTab] = useState("all")
   const [searchQuery, setSearchQuery] = useState("")
   const [categoryFilter, setCategoryFilter] = useState("")
   const [dateRange, setDateRange] = useState({ from: null, to: null })
   const [sortOrder, setSortOrder] = useState("newest")
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
 
   const router = useRouter()
   const { toast } = useToast()
+
+  useEffect(() => {
+    const init = async () => {
+      await fetchCategories()
+      await fetchTransactions()
+    }
+    init()
+  }, [])
+
+  const fetchTransactions = async () => {
+    try {
+      setIsLoading(true)
+      const response = await axios.get('/transactions')
+      if (response.data.status === 'success') {
+        setTransactions(response.data.data)
+        setFilteredTransactions(response.data.data)
+      }
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Gagal memuat transaksi",
+        duration: 3000,
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const fetchCategories = async () => {
+    try {
+      const response = await axios.get('/categories')
+      if (response.data.status === 'success') {
+        setCategories(response.data.data)
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Gagal memuat kategori",
+          duration: 3000,
+        })
+      }
+    } catch (error) {
+      console.error('Error fetching categories:', error)
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Gagal memuat kategori",
+        duration: 3000,
+      })
+    }
+  }
 
   // Filter and sort transactions
   useEffect(() => {
@@ -170,12 +163,25 @@ export default function TransactionsPage() {
     router.push(`/edit-transaction/${id}`)
   }
 
-  const handleDelete = (id: string) => {
-    toast({
-      title: "Transaksi dihapus",
-      description: "Transaksi berhasil dihapus",
-    })
-    setTransactions(transactions.filter((t) => t.id !== id))
+  const handleDelete = async (id: string) => {
+    try {
+      await axios.delete(`/transactions/${id}`)
+      
+      toast({
+        title: "Transaksi dihapus",
+        description: "Transaksi berhasil dihapus",
+        duration: 3000,
+      })
+      
+      fetchTransactions() // Refresh data
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Gagal menghapus transaksi",
+        duration: 3000,
+      })
+    }
   }
 
   const handleExport = () => {
@@ -355,8 +361,12 @@ export default function TransactionsPage() {
 
         {/* Transaction List */}
         <div className="space-y-6">
-          {Object.keys(groupedTransactions).length > 0 ? (
-              Object.entries(groupedTransactions as Record<string, typeof sampleTransactions>).map(([date, transactions]) => (
+          {isLoading ? (
+            <div className="text-center py-12">
+              <p className="text-muted-foreground">Memuat transaksi...</p>
+            </div>
+          ) : Object.keys(groupedTransactions).length > 0 ? (
+              Object.entries(groupedTransactions as Record<string, Transaction[]>).map(([date, transactions]) => (
                 <div key={date} className="space-y-4">
                   <div className="sticky top-14 z-20 -mx-4 px-4 py-2 bg-muted/50 backdrop-blur-sm">
                     <h2 className="text-sm font-medium text-muted-foreground">{date}</h2>
@@ -377,13 +387,16 @@ export default function TransactionsPage() {
           ) : (
             <div className="text-center py-12">
               <p className="text-muted-foreground">Tidak ada transaksi yang ditemukan</p>
-              <Button variant="outline" className="mt-4" onClick={handleClearFilters}>
-                Reset Filter
-              </Button>
             </div>
           )}
         </div>
       </main>
+      <TransactionDialog 
+        open={isAddDialogOpen}
+        onOpenChange={setIsAddDialogOpen}
+        categories={categories}
+        onSuccess={fetchTransactions}
+      />
     </div>
   )
 }

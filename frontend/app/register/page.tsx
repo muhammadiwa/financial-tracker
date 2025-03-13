@@ -39,6 +39,7 @@ export default function RegisterPage() {
             toast({
                 title: "Pendaftaran berhasil",
                 description: "Silakan masuk dengan akun baru Anda",
+                duration: 3000,
             })
             router.push("/login")
         }
@@ -53,6 +54,7 @@ export default function RegisterPage() {
             variant: "destructive",
             title: "Pendaftaran gagal",
             description: errorMessage,
+            duration: 3000,
         })
     } finally {
         setIsLoading(false)

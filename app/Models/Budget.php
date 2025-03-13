@@ -11,14 +11,13 @@ class Budget extends Model
         'user_id',
         'category_id',
         'amount',
-        'period_type',
-        'start_date',
-        'end_date'
+        'spent',
+        'period',
     ];
 
     protected $casts = [
-        'start_date' => 'date',
-        'end_date' => 'date'
+        'amount' => 'float',
+        'spent' => 'float',
     ];
 
     public function category(): BelongsTo

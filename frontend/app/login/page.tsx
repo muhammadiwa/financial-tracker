@@ -2,6 +2,12 @@
 
 import type React from "react"
 
+declare global {
+  interface Window {
+    google: any;
+  }
+}
+
 import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
@@ -40,6 +46,7 @@ export default function LoginPage() {
         toast({
           title: "Login berhasil",
           description: "Selamat datang kembali!",
+          duration: 3000,
         })
         router.push("/dashboard")
       }
@@ -49,6 +56,7 @@ export default function LoginPage() {
         variant: "destructive",
         title: "Login gagal",
         description: error.response?.data?.message || "Terjadi kesalahan",
+        duration: 3000,
       })
     } finally {
       setIsLoading(false)

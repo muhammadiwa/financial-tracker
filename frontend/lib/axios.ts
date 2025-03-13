@@ -1,34 +1,55 @@
 import axios from 'axios'
 
-const axiosInstance = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL
-})
-
-// Add request interceptor to add auth token
-axiosInstance.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token')
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`
-  }
-  return config
-})
-
-// Add response interceptor to handle auth errors
-axiosInstance.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (error.response?.status === 401 || error.response?.data?.message === 'Unauthenticated.') {
-      // Clear stored auth data
-      localStorage.removeItem('token')
-      localStorage.removeItem('user')
-      
-      // Redirect to login page
-      if (typeof window !== 'undefined') {
-        window.location.href = '/login'
-      }
+const instance = axios.create({
+    baseURL: process.env.NEXT_PUBLIC_API_URL,
+    headers: {
+        'Content-Type': 'application/json',
     }
-    return Promise.reject(error)
-  }
+})
+
+// Add request interceptor to add token to all requests
+instance.interceptors.request.use(
+    (config) => {
+        const token = localStorage.getItem('token')
+        if (token) {
+            config.headers.Authorization = `Bearer ${token}`
+        }
+        return config
+    },
+    (error) => {
+        return Promise.reject(error)
+    }
 )
 
-export default axiosInstance
+// Add response interceptor to handle token refresh
+instance.interceptors.response.use(
+    (response) => response,
+    async (error) => {
+        const originalRequest = error.config
+
+        // If error is unauthorized and we haven't tried to refresh yet
+        if (error.response?.status === 401 && !originalRequest._retry) {
+            originalRequest._retry = true
+
+            try {
+                // Redirect to login if no token
+                if (!localStorage.getItem('token')) {
+                    window.location.href = '/login'
+                    return Promise.reject(error)
+                }
+
+                // Try original request again
+                return instance(originalRequest)
+            } catch (error) {
+                // If refresh failed, redirect to login
+                localStorage.removeItem('token')
+                window.location.href = '/login'
+                return Promise.reject(error)
+            }
+        }
+
+        return Promise.reject(error)
+    }
+)
+
+export default instance

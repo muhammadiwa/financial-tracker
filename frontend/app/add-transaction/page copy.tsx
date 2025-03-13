@@ -1,7 +1,8 @@
 "use client"
 
 import type React from "react"
-import { useState, useEffect } from "react"
+
+import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -11,14 +12,20 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useToast } from "@/components/ui/use-toast"
 import { Breadcrumb } from "@/components/breadcrumb"
 import { HeaderMenu } from "@/components/header-menu"
-import axios from '@/lib/axios'
 
-interface Category {
-  id: string
-  name: string
-  type: 'income' | 'expense'
-  color: string
-}
+// Sample categories
+const incomeCategories = ["Gaji", "Freelance", "Investasi", "Hadiah", "Lainnya"]
+
+const expenseCategories = [
+  "Makanan",
+  "Transportasi",
+  "Belanja",
+  "Hiburan",
+  "Kesehatan",
+  "Pendidikan",
+  "Tagihan",
+  "Lainnya",
+]
 
 export default function AddTransactionPage() {
   const [type, setType] = useState<"income" | "expense">("expense")
@@ -27,70 +34,23 @@ export default function AddTransactionPage() {
   const [description, setDescription] = useState("")
   const [date, setDate] = useState(new Date().toISOString().split("T")[0])
   const [isLoading, setIsLoading] = useState(false)
-  const [categories, setCategories] = useState<Category[]>([])
 
   const router = useRouter()
   const { toast } = useToast()
 
-  // Fetch categories when component mounts
-  useEffect(() => {
-    fetchCategories()
-  }, [])
-
-  const fetchCategories = async () => {
-    try {
-      const response = await axios.get('/categories')
-      if (response.data.status === 'success') {
-        setCategories(response.data.data)
-      }
-    } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Gagal memuat kategori",
-        duration: 3000,
-      })
-    }
-  }
-
-  // Filter categories based on type
-  const incomeCategories = categories.filter(cat => cat.type === 'income')
-  const expenseCategories = categories.filter(cat => cat.type === 'expense')
-
-  // Reset category when type changes
-  useEffect(() => {
-    setCategory("")
-  }, [type])
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
 
-    try {
-      const response = await axios.post('/transactions', {
-        type,
-        amount: Number(amount),
-        category_id: category,
-        description,
-        date,
-      })
-
+    // Simulate saving transaction
+    setTimeout(() => {
+      setIsLoading(false)
       toast({
         title: "Transaksi berhasil ditambahkan",
-        description: `${type === "income" ? "Pemasukan" : "Pengeluaran"} sebesar Rp ${amount} telah dicatat.`,
-        duration: 3000,
+        description: `${type === "income" ? "Pemasukan" : "Pengeluaran"} sebesar Rp${amount} telah dicatat.`,
       })
       router.push("/dashboard")
-    } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Gagal menambahkan transaksi",
-        duration: 3000,
-      })
-    } finally {
-      setIsLoading(false)
-    }
+    }, 1000)
   }
 
   return (
@@ -138,14 +98,8 @@ export default function AddTransactionPage() {
                 </SelectTrigger>
                 <SelectContent>
                   {(type === "income" ? incomeCategories : expenseCategories).map((cat) => (
-                    <SelectItem key={cat.id} value={cat.id}>
-                      <div className="flex items-center">
-                        <div 
-                          className="w-4 h-4 rounded-full mr-2" 
-                          style={{ backgroundColor: cat.color }} 
-                        />
-                        <span>{cat.name}</span>
-                      </div>
+                    <SelectItem key={cat} value={cat}>
+                      {cat}
                     </SelectItem>
                   ))}
                 </SelectContent>
