@@ -1,16 +1,20 @@
 "use client"
 
-import type React from "react"
-
-import { useState, useEffect, useMemo } from "react"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
+import { cn } from "@/lib/utils"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogDescription 
+} from "@/components/ui/dialog"
 import { useToast } from "@/components/ui/use-toast"
-import axios from "@/lib/axios"
+import axios from '@/lib/axios'
 
 interface TransactionDialogProps {
   open: boolean
@@ -20,15 +24,15 @@ interface TransactionDialogProps {
     name: string
     type: "income" | "expense"
     color: string
-  }> | null
+  }>
   onSuccess?: () => void
 }
 
 export function TransactionDialog({
   open,
   onOpenChange,
-  categories = [], // Add default empty array
-  onSuccess,
+  categories,
+  onSuccess
 }: TransactionDialogProps) {
   const [type, setType] = useState<"income" | "expense">("expense")
   const [amount, setAmount] = useState("")
@@ -38,6 +42,17 @@ export function TransactionDialog({
   const [isLoading, setIsLoading] = useState(false)
 
   const { toast } = useToast()
+
+  // Reset form when dialog opens
+  useEffect(() => {
+    if (open) {
+      setType("expense")
+      setAmount("")
+      setCategory("")
+      setDescription("")
+      setDate(new Date().toISOString().split("T")[0])
+    }
+  }, [open])
 
   // Reset category when type changes
   useEffect(() => {
@@ -49,34 +64,20 @@ export function TransactionDialog({
     setIsLoading(true)
 
     try {
-      await axios.post(
-        `${process.env.NEXT_PUBLIC_API_URL}/transactions`,
-        {
-          type: type,
-          amount: Number(amount),
-          category_id: category,
-          description: description,
-          date: date,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        },
-      )
+      await axios.post('/transactions', {
+        type,
+        amount: Number(amount),
+        category_id: category,
+        description,
+        date,
+      })
 
       toast({
         title: "Transaksi berhasil ditambahkan",
         description: `${type === "income" ? "Pemasukan" : "Pengeluaran"} sebesar Rp${amount} telah dicatat.`,
       })
-
       onSuccess?.()
       onOpenChange(false)
-      setType("expense")
-      setAmount("")
-      setCategory("")
-      setDescription("")
-      setDate(new Date().toISOString().split("T")[0])
     } catch (error) {
       toast({
         variant: "destructive",
@@ -88,38 +89,51 @@ export function TransactionDialog({
     }
   }
 
-  const filteredCategories = useMemo(() => {
-    if (!categories) return [] // Ensure categories is an array
-    return categories.filter((cat) => cat.type === type)
-  }, [categories, type])
-
-  // Find the selected category object
-  const selectedCategory = useMemo(() => {
-    if (!category || !categories) return null
-    return categories.find((cat) => cat.id === category)
-  }, [category, categories])
+  // Filter categories based on type
+  const filteredCategories = categories.filter(cat => cat.type === type)
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Transaksi Baru</DialogTitle>
-          <DialogDescription>Isi detail transaksi di bawah ini.</DialogDescription>
+          <DialogTitle>Tambah Transaksi</DialogTitle>
+          <DialogDescription>
+            Tambahkan transaksi baru dengan mengisi form di bawah ini.
+          </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <Tabs
-            value={type}
-            defaultValue="expense"
-            className="w-full"
-            onValueChange={(value) => {
-              setType(value as "income" | "expense")
-            }}
-          >
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="expense">Pengeluaran</TabsTrigger>
-              <TabsTrigger value="income">Pemasukan</TabsTrigger>
-            </TabsList>
-          </Tabs>
+
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Jenis Transaksi</label>
+            <div className="grid grid-cols-2 gap-4">
+              <Button
+                type="button"
+                variant={type === "income" ? "default" : "outline"}
+                onClick={() => setType("income")}
+                className={cn(
+                  "w-full",
+                  type === "income" 
+                    ? "bg-green-600 hover:bg-green-700 text-white" 
+                    : "hover:bg-green-50"
+                )}
+              >
+                Pemasukan
+              </Button>
+              <Button
+                type="button"
+                variant={type === "expense" ? "default" : "outline"}
+                onClick={() => setType("expense")}
+                className={cn(
+                  "w-full",
+                  type === "expense" 
+                    ? "bg-red-600 hover:bg-red-700 text-white" 
+                    : "hover:bg-red-50"
+                )}
+              >
+                Pengeluaran
+              </Button>
+            </div>
+          </div>
 
           <div className="space-y-2">
             <label className="text-sm font-medium">Jumlah</label>
@@ -138,29 +152,40 @@ export function TransactionDialog({
 
           <div className="space-y-2">
             <label className="text-sm font-medium">Kategori</label>
-            <Select value={category} onValueChange={setCategory} required>
+            <Select 
+              value={category} 
+              onValueChange={setCategory} 
+              required
+            >
               <SelectTrigger>
-                <SelectValue placeholder="Pilih kategori" />
+                <SelectValue placeholder="Pilih kategori">
+                  {category ? categories.find(cat => String(cat.id) === category)?.name : "Pilih kategori"}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
-                {filteredCategories.length > 0 ? (
-                  filteredCategories.map((cat) => (
-                    <SelectItem key={cat.id} value={cat.id}>
-                      {cat.name}
-                    </SelectItem>
-                  ))
-                ) : (
-                  <SelectItem value="no-categories" disabled>
-                    Tidak ada kategori
+                {filteredCategories.map((cat) => (
+                  <SelectItem key={cat.id} value={String(cat.id)}>
+                    <div className="flex items-center">
+                      <div 
+                        className="w-4 h-4 rounded-full mr-2" 
+                        style={{ backgroundColor: cat.color }} 
+                      />
+                      <span>{cat.name}</span>
+                    </div>
                   </SelectItem>
-                )}
+                ))}
               </SelectContent>
             </Select>
           </div>
 
           <div className="space-y-2">
             <label className="text-sm font-medium">Tanggal</label>
-            <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} required />
+            <Input 
+              type="date" 
+              value={date} 
+              onChange={(e) => setDate(e.target.value)} 
+              required 
+            />
           </div>
 
           <div className="space-y-2">
@@ -173,11 +198,18 @@ export function TransactionDialog({
             />
           </div>
 
-          <div className="flex gap-2 justify-end">
-            <Button variant="outline" onClick={() => onOpenChange(false)} type="button">
+          <div className="flex justify-end gap-4">
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={() => onOpenChange(false)}
+            >
               Batal
             </Button>
-            <Button type="submit" disabled={isLoading}>
+            <Button 
+              type="submit" 
+              disabled={isLoading}
+            >
               {isLoading ? "Menyimpan..." : "Simpan"}
             </Button>
           </div>

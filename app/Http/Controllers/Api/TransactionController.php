@@ -12,28 +12,35 @@ class TransactionController extends Controller
 {
     public function index(Request $request)
     {
-        $userId = auth()->id();
-        $cacheKey = "transactions_{$userId}";
+        $query = Transaction::query()
+            ->with('category')
+            ->where('user_id', auth()->id());
 
-        return Cache::remember($cacheKey, now()->addMinutes(5), function () use ($userId) {
-            return Transaction::with('category')
-                ->where('user_id', $userId)
-                ->orderBy('date', 'desc')
-                ->orderBy('created_at', 'desc')
-                ->get()
-                ->map(function ($transaction) {
-                    return [
-                        'id' => $transaction->id,
-                        'description' => $transaction->description,
-                        'amount' => $transaction->amount,
-                        'type' => $transaction->type,
-                        'category' => $transaction->category->name,
-                        'category_id' => $transaction->category_id,
-                        'color' => $transaction->category->color,
-                        'date' => $transaction->date->format('Y-m-d'),
-                    ];
-                });
-        });
+        // Add month and year filtering
+        if ($request->has(['month', 'year'])) {
+            $query->whereYear('date', $request->year)
+                  ->whereMonth('date', $request->month);
+        }
+
+        $transactions = $query->orderBy('date', 'desc')
+                             ->orderBy('created_at', 'desc')
+                             ->get();
+
+        return response()->json([
+            'status' => 'success',
+            'data' => $transactions->map(function ($transaction) {
+                return [
+                    'id' => $transaction->id,
+                    'description' => $transaction->description,
+                    'amount' => $transaction->amount,
+                    'type' => $transaction->type,
+                    'category' => $transaction->category->name,
+                    'category_id' => $transaction->category_id,
+                    'color' => $transaction->category->color,
+                    'date' => $transaction->date->format('Y-m-d'),
+                ];
+            })
+        ]);
     }
 
     public function store(Request $request)
@@ -159,5 +166,33 @@ class TransactionController extends Controller
                 'message' => 'Gagal menghapus transaksi'
             ], 500);
         }
+    }
+
+    public function show(Transaction $transaction)
+    {
+        // Check if the transaction belongs to the authenticated user
+        if ($transaction->user_id !== auth()->id()) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Unauthorized'
+            ], 403);
+        }
+
+        // Load the category relationship
+        $transaction->load('category');
+
+        return response()->json([
+            'status' => 'success',
+            'data' => [
+                'id' => $transaction->id,
+                'description' => $transaction->description,
+                'amount' => $transaction->amount,
+                'type' => $transaction->type,
+                'category' => $transaction->category->name,
+                'category_id' => $transaction->category_id,
+                'color' => $transaction->category->color,
+                'date' => $transaction->date->format('Y-m-d'),
+            ]
+        ]);
     }
 }

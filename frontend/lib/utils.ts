@@ -44,8 +44,10 @@ export function getRandomColor(index: number): string {
   return colors[index % colors.length]
 }
 
-export function groupTransactionsByDate(transactions: any[]) {
-  return transactions.reduce((groups: any, transaction) => {
+export function groupTransactionsByDate(transactions: Transaction[]) {
+  if (!transactions || transactions.length === 0) return {}
+  
+  return transactions.reduce((groups: Record<string, Transaction[]>, transaction) => {
     const date = format(parseISO(transaction.date), "d MMMM yyyy", { locale: id })
     if (!groups[date]) {
       groups[date] = []

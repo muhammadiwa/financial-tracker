@@ -1,11 +1,10 @@
 "use client"
 
-import Link from "next/link"
 import { usePathname } from "next/navigation"
+import Link from "next/link"
 import { Home, PieChart, Plus, CreditCard, DollarSign } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useState, useEffect } from "react"
-import { Button } from "@/components/ui/button"
 import { TransactionDialog } from "@/components/transaction-dialog"
 import axios from '@/lib/axios'
 
@@ -29,7 +28,6 @@ const navItems = [
   },
   {
     name: "Tambah",
-    href: "/add-transaction", // Add href back
     icon: Plus,
     isAction: true,
   },
@@ -75,9 +73,9 @@ export function MobileNav() {
 
             if (item.isAction) {
               return (
-                <Link
+                <button
                   key="add-transaction"
-                  href={item.href!}
+                  onClick={() => setIsAddDialogOpen(true)}
                   className={cn(
                     "flex flex-col items-center justify-center w-full h-full text-xs relative -top-4"
                   )}
@@ -85,7 +83,7 @@ export function MobileNav() {
                   <div className="flex items-center justify-center w-12 h-12 rounded-full bg-primary text-primary-foreground shadow-lg">
                     <item.icon className="h-6 w-6" />
                   </div>
-                </Link>
+                </button>
               )
             }
 

@@ -132,7 +132,11 @@ export default function AddTransactionPage() {
 
             <div className="space-y-2">
               <label className="text-sm font-medium">Kategori</label>
-              <Select value={category} onValueChange={setCategory} required>
+              <Select 
+                value={category} 
+                onValueChange={setCategory} 
+                required
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Pilih kategori" />
                 </SelectTrigger>
