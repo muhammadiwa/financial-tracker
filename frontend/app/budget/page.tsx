@@ -34,6 +34,7 @@ import { useToast } from "@/components/ui/use-toast"
 import { HeaderMenu } from "@/components/header-menu"
 import axios from '@/lib/axios'
 import { PageWrapper } from "@/components/page-wrapper"
+import { MonthYearPicker } from "@/components/month-year-picker"
 
 export default function BudgetPage() {
   const [budgets, setBudgets] = useState<Array<{
@@ -66,17 +67,30 @@ export default function BudgetPage() {
     color: string;
   }>>([])
 
+  const [monthYear, setMonthYear] = useState(() => {
+    const now = new Date()
+    return {
+      month: (now.getMonth() + 1).toString().padStart(2, '0'),
+      year: now.getFullYear().toString()
+    }
+  })
+
   const router = useRouter()
   const { toast } = useToast()
 
   // Fetch budgets
   useEffect(() => {
     fetchBudgets()
-  }, [])
+  }, [monthYear])
 
   const fetchBudgets = async () => {
     try {
-      const response = await axios.get('/budgets')
+      const response = await axios.get('/budgets', {
+        params: {
+          month: monthYear.month,
+          year: monthYear.year
+        }
+      })
       setBudgets(response.data.data)
     } catch (error) {
       toast({
@@ -323,224 +337,234 @@ export default function BudgetPage() {
         </Dialog>
       </div>
 
-      {/* Total Budget Summary */}
-      <Card className="mb-6">
-        <CardContent className="p-6">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4">
-            <div>
-              <h2 className="text-xl font-bold">Total Anggaran</h2>
-              <p className="text-muted-foreground">Periode: Bulanan</p>
-            </div>
-            <div className="mt-2 md:mt-0 text-right">
-              <p className="text-2xl font-bold">{formatCurrency(totalBudget)}</p>
-              <p className="text-muted-foreground">
-                Terpakai: {formatCurrency(totalSpent)} ({totalPercentage.toFixed(0)}%)
-              </p>
-            </div>
-          </div>
-
-          <Progress
-            value={totalPercentage > 100 ? 100 : totalPercentage}
-            className={`h-3 ${totalPercentage > 90 ? "bg-red-500" : totalPercentage > 75 ? "bg-yellow-500" : "bg-green-500"}`}
+      <div className="container mx-auto py-6">
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-2xl font-bold">Anggaran</h1>
+          <MonthYearPicker 
+            value={monthYear}
+            onChange={setMonthYear}
           />
-
-          {totalPercentage > 90 && (
-            <div className="flex items-center mt-4 p-3 bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 rounded-md">
-              <AlertTriangle className="h-5 w-5 mr-2 flex-shrink-0" />
-              <p className="text-sm">
-                Anda telah menggunakan {totalPercentage.toFixed(0)}% dari total anggaran Anda.
-              </p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Budget List */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {budgets.map((budget) => {
-          const percentage = (budget.spent / budget.amount) * 100
-          const isOverBudget = percentage > 100
-
-          return (
-            <Card key={budget.id} className="overflow-hidden">
-              <div
-                className="h-1"
-                style={{
-                  backgroundColor: budget.color,
-                  width: `${percentage > 100 ? 100 : percentage}%`,
-                }}
-              />
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center">
-                    <div
-                      className="w-8 h-8 rounded-full flex items-center justify-center mr-3"
-                      style={{ backgroundColor: budget.color }}
-                    >
-                      <span className="text-white text-xs font-bold">{budget.category.substring(0, 1)}</span>
-                    </div>
-                    <div>
-                      <h3 className="font-medium">{budget.category}</h3>
-                      <p className="text-xs text-muted-foreground">
-                        {budget.period === "weekly"
-                          ? "Mingguan"
-                          : budget.period === "monthly"
-                            ? "Bulanan"
-                            : "Tahunan"}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex gap-1">
-                    <Button variant="ghost" size="icon" onClick={() => openEditDialog(budget)}>
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button variant="ghost" size="icon" onClick={() => setDeletingBudgetId(budget.id)}>
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Hapus Anggaran</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            Apakah Anda yakin ingin menghapus anggaran ini? Tindakan ini tidak dapat dibatalkan.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Batal</AlertDialogCancel>
-                          <AlertDialogAction onClick={handleDeleteBudget}>Hapus</AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span>Terpakai</span>
-                    <span className={isOverBudget ? "text-red-600 dark:text-red-400" : ""}>
-                      {formatCurrency(budget.spent)} / {formatCurrency(budget.amount)}
-                    </span>
-                  </div>
-                  <Progress
-                    value={percentage > 100 ? 100 : percentage}
-                    className={`h-2 ${
-                      isOverBudget ? "bg-red-500" : percentage > 75 ? "bg-yellow-500" : "bg-green-500"
-                    }`}
-                  />
-                  <div className="flex justify-between items-center text-xs">
-                    <span
-                      className={`${
-                        isOverBudget
-                          ? "text-red-600 dark:text-red-400"
-                          : percentage > 75
-                            ? "text-yellow-600 dark:text-yellow-400"
-                            : "text-green-600 dark:text-green-400"
-                      }`}
-                    >
-                      {percentage.toFixed(0)}%
-                    </span>
-                    <span className="text-muted-foreground">
-                      {isOverBudget
-                        ? `Melebihi anggaran sebesar ${formatCurrency(budget.spent - budget.amount)}`
-                        : `Tersisa ${formatCurrency(budget.amount - budget.spent)}`}
-                    </span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )
-        })}
-      </div>
-
-      {budgets.length === 0 && (
-        <div className="text-center py-12">
-          <p className="text-muted-foreground">Belum ada anggaran yang dibuat</p>
         </div>
-      )}
-
-      {/* Edit Budget Dialog */}
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Edit Anggaran</DialogTitle>
-            <DialogDescription>Ubah detail anggaran</DialogDescription>
-          </DialogHeader>
-          {editingBudget && (
-            <div className="grid gap-4 py-4">
-              <div className="grid gap-2">
-                <label htmlFor="edit-category" className="text-sm font-medium">
-                  Kategori
-                </label>
-                <Select
-                  value={editingBudget.category}
-                  onValueChange={(value) => setEditingBudget({ ...editingBudget, category: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Pilih kategori" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categories
-                      .filter(category => category.type === 'expense')
-                      .map((category) => (
-                        <SelectItem key={category.id} value={category.id}>
-                          <div className="flex items-center">
-                            <div 
-                              className="w-4 h-4 rounded-full mr-2" 
-                              style={{ backgroundColor: category.color }} 
-                            />
-                            <span>{category.name}</span>
-                          </div>
-                        </SelectItem>
-                      ))}
-                  </SelectContent>
-                </Select>
+      
+        {/* Total Budget Summary */}
+        <Card className="mb-6">
+          <CardContent className="p-6">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4">
+              <div>
+                <h2 className="text-xl font-bold">Total Anggaran</h2>
+                <p className="text-muted-foreground">Periode: Bulanan</p>
               </div>
-              <div className="grid gap-2">
-                <label htmlFor="edit-amount" className="text-sm font-medium">
-                  Jumlah Anggaran
-                </label>
-                <div className="relative">
-                  <span className="absolute left-3 top-3 text-muted-foreground">Rp</span>
-                  <Input
-                    id="edit-amount"
-                    type="number"
-                    value={editingBudget.amount}
-                    onChange={(e) => setEditingBudget({ ...editingBudget, amount: e.target.value })}
-                    className="pl-10"
-                    placeholder="0"
-                  />
-                </div>
-              </div>
-              <div className="grid gap-2">
-                <label htmlFor="edit-period" className="text-sm font-medium">
-                  Periode
-                </label>
-                <Select
-                  value={editingBudget.period}
-                  onValueChange={(value) => setEditingBudget({ ...editingBudget, period: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Pilih periode" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="weekly">Mingguan</SelectItem>
-                    <SelectItem value="monthly">Bulanan</SelectItem>
-                    <SelectItem value="yearly">Tahunan</SelectItem>
-                  </SelectContent>
-                </Select>
+              <div className="mt-2 md:mt-0 text-right">
+                <p className="text-2xl font-bold">{formatCurrency(totalBudget)}</p>
+                <p className="text-muted-foreground">
+                  Terpakai: {formatCurrency(totalSpent)} ({totalPercentage.toFixed(0)}%)
+                </p>
               </div>
             </div>
-          )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
-              Batal
-            </Button>
-            <Button onClick={handleEditBudget}>Simpan</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+
+            <Progress
+              value={totalPercentage > 100 ? 100 : totalPercentage}
+              className={`h-3 ${totalPercentage > 90 ? "bg-red-500" : totalPercentage > 75 ? "bg-yellow-500" : "bg-green-500"}`}
+            />
+
+            {totalPercentage > 90 && (
+              <div className="flex items-center mt-4 p-3 bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 rounded-md">
+                <AlertTriangle className="h-5 w-5 mr-2 flex-shrink-0" />
+                <p className="text-sm">
+                  Anda telah menggunakan {totalPercentage.toFixed(0)}% dari total anggaran Anda.
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Budget List */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {budgets.map((budget) => {
+            const percentage = (budget.spent / budget.amount) * 100
+            const isOverBudget = percentage > 100
+
+            return (
+              <Card key={budget.id} className="overflow-hidden">
+                <div
+                  className="h-1"
+                  style={{
+                    backgroundColor: budget.color,
+                    width: `${percentage > 100 ? 100 : percentage}%`,
+                  }}
+                />
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center">
+                      <div
+                        className="w-8 h-8 rounded-full flex items-center justify-center mr-3"
+                        style={{ backgroundColor: budget.color }}
+                      >
+                        <span className="text-white text-xs font-bold">{budget.category.substring(0, 1)}</span>
+                      </div>
+                      <div>
+                        <h3 className="font-medium">{budget.category}</h3>
+                        <p className="text-xs text-muted-foreground">
+                          {budget.period === "weekly"
+                            ? "Mingguan"
+                            : budget.period === "monthly"
+                              ? "Bulanan"
+                              : "Tahunan"}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex gap-1">
+                      <Button variant="ghost" size="icon" onClick={() => openEditDialog(budget)}>
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="ghost" size="icon" onClick={() => setDeletingBudgetId(budget.id)}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Hapus Anggaran</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Apakah Anda yakin ingin menghapus anggaran ini? Tindakan ini tidak dapat dibatalkan.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Batal</AlertDialogCancel>
+                            <AlertDialogAction onClick={handleDeleteBudget}>Hapus</AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span>Terpakai</span>
+                      <span className={isOverBudget ? "text-red-600 dark:text-red-400" : ""}>
+                        {formatCurrency(budget.spent)} / {formatCurrency(budget.amount)}
+                      </span>
+                    </div>
+                    <Progress
+                      value={percentage > 100 ? 100 : percentage}
+                      className={`h-2 ${
+                        isOverBudget ? "bg-red-500" : percentage > 75 ? "bg-yellow-500" : "bg-green-500"
+                      }`}
+                    />
+                    <div className="flex justify-between items-center text-xs">
+                      <span
+                        className={`${
+                          isOverBudget
+                            ? "text-red-600 dark:text-red-400"
+                            : percentage > 75
+                              ? "text-yellow-600 dark:text-yellow-400"
+                              : "text-green-600 dark:text-green-400"
+                        }`}
+                      >
+                        {percentage.toFixed(0)}%
+                      </span>
+                      <span className="text-muted-foreground">
+                        {isOverBudget
+                          ? `Melebihi anggaran sebesar ${formatCurrency(budget.spent - budget.amount)}`
+                          : `Tersisa ${formatCurrency(budget.amount - budget.spent)}`}
+                      </span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )
+          })}
+        </div>
+
+        {budgets.length === 0 && (
+          <div className="text-center py-12">
+            <p className="text-muted-foreground">Belum ada anggaran yang dibuat</p>
+          </div>
+        )}
+
+        {/* Edit Budget Dialog */}
+        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Edit Anggaran</DialogTitle>
+              <DialogDescription>Ubah detail anggaran</DialogDescription>
+            </DialogHeader>
+            {editingBudget && (
+              <div className="grid gap-4 py-4">
+                <div className="grid gap-2">
+                  <label htmlFor="edit-category" className="text-sm font-medium">
+                    Kategori
+                  </label>
+                  <Select
+                    value={editingBudget.category}
+                    onValueChange={(value) => setEditingBudget({ ...editingBudget, category: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Pilih kategori" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {categories
+                        .filter(category => category.type === 'expense')
+                        .map((category) => (
+                          <SelectItem key={category.id} value={category.id}>
+                            <div className="flex items-center">
+                              <div 
+                                className="w-4 h-4 rounded-full mr-2" 
+                                style={{ backgroundColor: category.color }} 
+                              />
+                              <span>{category.name}</span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid gap-2">
+                  <label htmlFor="edit-amount" className="text-sm font-medium">
+                    Jumlah Anggaran
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-3 text-muted-foreground">Rp</span>
+                    <Input
+                      id="edit-amount"
+                      type="number"
+                      value={editingBudget.amount}
+                      onChange={(e) => setEditingBudget({ ...editingBudget, amount: e.target.value })}
+                      className="pl-10"
+                      placeholder="0"
+                    />
+                  </div>
+                </div>
+                <div className="grid gap-2">
+                  <label htmlFor="edit-period" className="text-sm font-medium">
+                    Periode
+                  </label>
+                  <Select
+                    value={editingBudget.period}
+                    onValueChange={(value) => setEditingBudget({ ...editingBudget, period: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Pilih periode" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="weekly">Mingguan</SelectItem>
+                      <SelectItem value="monthly">Bulanan</SelectItem>
+                      <SelectItem value="yearly">Tahunan</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            )}
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+                Batal
+              </Button>
+              <Button onClick={handleEditBudget}>Simpan</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
     </PageWrapper>
   )
 }

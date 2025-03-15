@@ -2,11 +2,12 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Models\Budget;
 use App\Models\Transaction;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\DB;
 
 class TransactionController extends Controller
 {
@@ -60,6 +61,23 @@ class TransactionController extends Controller
 
             // Clear cache
             Cache::forget("transactions_" . auth()->id());
+
+            $matchingBudget = Budget::where('user_id', auth()->id())
+                ->where('category_id', $validatedData['category_id'])
+                ->whereMonth('created_at', now()->month)
+                ->whereYear('created_at', now()->year)
+                ->first();
+
+            if (!$matchingBudget) {
+                return response()->json([
+                    'status' => 'success',
+                    'message' => 'No matching budget found for this category'
+                ]);
+            }
+
+            // Update spent amount
+            $matchingBudget->spent += $validatedData['amount'];
+            $matchingBudget->save();
 
             DB::commit();
 

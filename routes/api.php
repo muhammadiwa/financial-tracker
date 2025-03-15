@@ -14,4 +14,5 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('categories', CategoryController::class);
     Route::apiResource('budgets', BudgetController::class);
     Route::apiResource('transactions', TransactionController::class);
+    Route::put('budgets/{budget}/update-spent', [BudgetController::class, 'updateSpent']);
 });

@@ -9,26 +9,42 @@ use Illuminate\Http\Request;
 
 class BudgetController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $budgets = auth()->user()->budgets()
-            ->with('category')
-            ->get()
-            ->map(function ($budget) {
+        $query = Budget::with('category')
+            ->where('user_id', auth()->id());
+
+        // Filter by month/year from created_at
+        if ($request->has(['month', 'year'])) {
+            $query->whereMonth('created_at', $request->month)
+                  ->whereYear('created_at', $request->year);
+        } else {
+            // Default to current month
+            $query->whereMonth('created_at', now()->month)
+                  ->whereYear('created_at', now()->year);
+        }
+
+        $budgets = $query->get();
+
+        // If no budgets found for current month, duplicate from last month
+        if ($budgets->isEmpty() && !$request->has(['month', 'year'])) {
+            $this->duplicateMonthly();
+            return $this->index($request); // Recall index to get new budgets
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'data' => $budgets->map(function ($budget) {
                 return [
                     'id' => $budget->id,
                     'category' => $budget->category->name,
-                    'category_id' => $budget->category_id, // Make sure this is included
+                    'category_id' => $budget->category_id,
                     'amount' => $budget->amount,
                     'spent' => $budget->spent,
                     'period' => $budget->period,
                     'color' => $budget->category->color,
                 ];
-            });
-
-        return response()->json([
-            'status' => 'success',
-            'data' => $budgets
+            })
         ]);
     }
 
@@ -101,6 +117,40 @@ class BudgetController extends Controller
         return response()->json([
             'status' => 'success',
             'message' => 'Anggaran berhasil dihapus'
+        ]);
+    }
+
+    public function duplicateMonthly()
+    {
+        // Get all users who had budgets last month
+        $users = Budget::whereMonth('created_at', now()->subMonth()->month)
+            ->whereYear('created_at', now()->subMonth()->year)
+            ->select('user_id')
+            ->distinct()
+            ->get();
+
+        foreach ($users as $user) {
+            // Get last month's budgets for each user
+            $lastMonthBudgets = Budget::where('user_id', $user->user_id)
+                ->whereMonth('created_at', now()->subMonth()->month)
+                ->whereYear('created_at', now()->subMonth()->year)
+                ->get();
+
+            // Duplicate budgets for current month with reset spent amount
+            foreach ($lastMonthBudgets as $budget) {
+                Budget::create([
+                    'user_id' => $budget->user_id,
+                    'category_id' => $budget->category_id,
+                    'amount' => $budget->amount,
+                    'spent' => 0, // Reset spent amount
+                    'period' => $budget->period,
+                ]);
+            }
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Anggaran bulan baru berhasil dibuat untuk semua pengguna'
         ]);
     }
 }
