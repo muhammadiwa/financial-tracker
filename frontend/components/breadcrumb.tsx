@@ -10,7 +10,6 @@ import { tr } from "date-fns/locale"
 const routeNameMap: Record<string, string> = {
   dashboard: "Beranda",
   statistics: "Statistik",
-  "add-transaction": "Tambah Transaksi",
   reports: "Laporan",
   settings: "Pengaturan",
   categories: "Kategori",

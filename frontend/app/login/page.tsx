@@ -1,14 +1,7 @@
 "use client"
 
 import type React from "react"
-
-declare global {
-  interface Window {
-    google: any;
-  }
-}
-
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Eye, EyeOff, Mail, Lock } from "lucide-react"
@@ -16,7 +9,14 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { useToast } from "@/components/ui/use-toast"
-import axios from "axios"
+import axios from "@/lib/axios"
+
+declare global {
+  interface Window {
+    google?: any;
+    googleAuthInitialized?: boolean;
+  }
+}
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
@@ -24,8 +24,102 @@ export default function LoginPage() {
   const [password, setPassword] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
+  const [googleLoaded, setGoogleLoaded] = useState(false)
   const router = useRouter()
   const { toast } = useToast()
+
+  useEffect(() => {
+    // Load Google Sign-In script
+    const loadGoogleScript = () => {
+      if (typeof window === 'undefined') return;
+      
+      const script = document.createElement('script')
+      script.src = 'https://accounts.google.com/gsi/client'
+      script.async = true
+      script.defer = true
+      script.onload = initializeGoogleSignIn
+      document.body.appendChild(script)
+
+      return () => {
+        document.body.removeChild(script)
+      }
+    }
+
+    loadGoogleScript()
+  }, [])
+
+  const initializeGoogleSignIn = () => {
+    if (typeof window === 'undefined' || !window.google) return;
+
+    try {
+        window.google.accounts.id.initialize({
+            client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID!,
+            callback: handleGoogleCallback,
+            auto_select: false,
+            cancel_on_tap_outside: true,
+            context: 'signin',
+            use_fedcm_for_prompt: true // Add this
+        });
+
+        window.google.accounts.id.renderButton(
+            document.getElementById('googleButton')!,
+            {
+                type: 'standard',
+                theme: 'outline',
+                size: 'large',
+                text: 'continue_with',
+                shape: 'rectangular',
+                width: '100%',
+                locale: 'id_ID'
+            }
+        );
+
+        setGoogleLoaded(true);
+    } catch (error) {
+        console.error('Error initializing Google Sign-In:', error);
+    }
+};
+
+  const handleGoogleCallback = async (response: any) => {
+    if (!response?.credential) {
+        console.error("No credential received");
+        return;
+    }
+
+    setIsLoading(true);
+    try {
+
+        const result = await axios.post('/login/google', {
+            credential: response.credential
+        });
+
+        if (result.data.status === 'success') {
+            localStorage.setItem('token', result.data.token);
+            localStorage.setItem('user', JSON.stringify(result.data.user));
+            
+            toast({
+                title: "Login berhasil",
+                description: "Selamat datang!",
+                duration: 3000,
+            });
+            
+            router.push("/dashboard");
+        }
+    } catch (error: any) {
+        console.error('Full error:', error);
+        console.error('Error response:', error.response?.data);
+        
+        toast({
+            variant: "destructive",
+            title: "Login gagal",
+            description: error.response?.data?.message || "Gagal terhubung ke server",
+            duration: 3000,
+        });
+
+    } finally {
+        setIsLoading(false);
+    }
+};
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -33,7 +127,7 @@ export default function LoginPage() {
     setError("")
 
     try {
-      const response = await axios.post('http://localhost:8000/api/login', {
+      const response = await axios.post('/login', {
         email,
         password
       })
@@ -63,60 +157,18 @@ export default function LoginPage() {
     }
   }
 
-  const handleGoogleLogin = async () => {
-    try {
-      // Initialize Google OAuth
-      const googleAuth = await google.accounts.oauth2.initTokenClient({
-        client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID!,
-        scope: 'email profile',
-        callback: async (response) => {
-          const result = await axios.post('http://localhost:8000/api/login/google', {
-            access_token: response.access_token
-          })
-
-          if (result.data.status === 'success') {
-            localStorage.setItem('token', result.data.token)
-            localStorage.setItem('user', JSON.stringify(result.data.user))
-            router.push("/dashboard")
-          }
-        },
-      })
-
-      googleAuth.requestAccessToken()
-    } catch (error) {
-      console.error('Google login failed:', error)
-    }
-  }
-
-  const handleFacebookLogin = async () => {
-    try {
-      FB.login(async function(response) {
-        if (response.authResponse) {
-          const result = await axios.post('http://localhost:8000/api/login/facebook', {
-            access_token: response.authResponse.accessToken
-          })
-
-          if (result.data.status === 'success') {
-            localStorage.setItem('token', result.data.token)
-            localStorage.setItem('user', JSON.stringify(result.data.user))
-            router.push("/dashboard")
-          }
-        }
-      }, {scope: 'email'})
-    } catch (error) {
-      console.error('Facebook login failed:', error)
-    }
-  }
-
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-muted/40">
       <Card className="w-full max-w-md">
+        {/* Card content remains the same */}
         <CardHeader className="space-y-1 text-center">
           <CardTitle className="text-2xl font-bold">Money Record</CardTitle>
           <CardDescription>Masuk ke akun Anda untuk melanjutkan</CardDescription>
         </CardHeader>
         <CardContent>
+          {/* Form content remains the same */}
           <form onSubmit={handleLogin} className="space-y-4">
+            {/* Email and password fields remain the same */}
             <div className="space-y-2">
               <div className="relative">
                 <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
@@ -164,7 +216,7 @@ export default function LoginPage() {
           </div>
         </CardContent>
         <CardFooter className="flex flex-col">
-          <div className="relative my-2 w-full">
+          {/* <div className="relative my-2 w-full">
             <div className="absolute inset-0 flex items-center">
               <span className="w-full border-t" />
             </div>
@@ -172,24 +224,13 @@ export default function LoginPage() {
               <span className="bg-background px-2 text-muted-foreground">Atau masuk dengan</span>
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-4 mt-2 w-full">
-            <Button 
-              variant="outline" 
-              className="w-full"
-              onClick={handleGoogleLogin}
-              disabled={isLoading}
-            >
-              Google
-            </Button>
-            <Button 
-              variant="outline" 
-              className="w-full"
-              onClick={handleFacebookLogin}
-              disabled={isLoading}
-            >
-              Facebook
-            </Button>
-          </div>
+          <div className="grid grid-cols-1 gap-4 mt-2 w-full">
+            <div 
+              id="googleButton" 
+              className="w-full flex justify-center"
+              aria-disabled={isLoading}
+            />
+          </div> */}
           <div className="mt-4 text-center text-sm">
             Belum punya akun?{" "}
             <Link href="/register" className="text-primary hover:underline">
@@ -201,4 +242,3 @@ export default function LoginPage() {
     </div>
   )
 }
-
