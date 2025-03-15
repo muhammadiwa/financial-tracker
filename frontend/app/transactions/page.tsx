@@ -1,7 +1,7 @@
 "use client"
 
-import { useState, useEffect, useMemo } from "react"
-import { useRouter } from "next/navigation"
+import { useState, useEffect, useMemo, useCallback } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import { Search, Filter, ArrowUpDown, Download, Plus, ArrowUpRight, ArrowDownRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -20,7 +20,6 @@ import axios from '@/lib/axios'
 import { TransactionDialog } from "@/components/transaction-dialog"
 import { TransactionDetailDialog } from "@/components/transaction-detail-dialog"
 import { MonthYearPicker } from "@/components/month-year-picker"
-import * as XLSX from 'xlsx'
 import { startOfMonth, endOfMonth, eachDayOfInterval, format, parseISO } from 'date-fns'
 import { id } from 'date-fns/locale'
 
@@ -43,95 +42,80 @@ interface Category {
 }
 
 export default function TransactionsPage() {
+  const searchParams = useSearchParams();
+  const monthParam = searchParams.get('month');
+  const yearParam = searchParams.get('year');
+
+  const [monthYear, setMonthYear] = useState(() => {
+    const now = new Date();
+    return {
+      month: monthParam || (now.getMonth() + 1).toString().padStart(2, '0'),
+      year: yearParam || now.getFullYear().toString()
+    };
+  });
+
   const [transactions, setTransactions] = useState<Transaction[]>([])
-  const [filteredTransactions, setFilteredTransactions] = useState<Transaction[]>([])
   const [categories, setCategories] = useState<Category[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+
+  // Combined fetch function for initial load
+  const fetchData = useCallback(async () => {
+    setIsLoading(true)
+    try {
+      const [transactionsRes, categoriesRes] = await Promise.all([
+        axios.get('/transactions', {
+          params: {
+            month: monthYear.month,
+            year: monthYear.year
+          }
+        }),
+        axios.get('/categories')
+      ])
+
+      if (transactionsRes.data.status === 'success') {
+        setTransactions(transactionsRes.data.data)
+      }
+      
+      if (categoriesRes.data.status === 'success') {
+        setCategories(categoriesRes.data.data)
+      }
+    } catch (error) {
+      console.error('Error fetching data:', error)
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Gagal memuat data",
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }, [monthYear.month, monthYear.year])
+
+  // Single useEffect for initial data fetch
+  useEffect(() => {
+    fetchData()
+  }, [fetchData])
+
+  // Update URL when monthYear changes
+  useEffect(() => {
+    const url = new URL(window.location.href)
+    url.searchParams.set('month', monthYear.month)
+    url.searchParams.set('year', monthYear.year)
+    window.history.pushState({}, '', url)
+  }, [monthYear])
+
+  const [filteredTransactions, setFilteredTransactions] = useState<Transaction[]>([])
   const [activeTab, setActiveTab] = useState("all")
   const [searchQuery, setSearchQuery] = useState("")
   const [categoryFilter, setCategoryFilter] = useState("")
   const [sortOrder, setSortOrder] = useState("newest")
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
-  const [isLoading, setIsLoading] = useState(true)
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null)
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false)
   const [displayTransactions, setDisplayTransactions] = useState<Transaction[]>([])
 
-  const [monthYear, setMonthYear] = useState(() => {
-    const now = new Date()
-    return {
-      month: (now.getMonth() + 1).toString().padStart(2, '0'),
-      year: now.getFullYear().toString()
-    }
-  })
-
   const router = useRouter()
   const { toast } = useToast()
-
-  const fetchTransactions = async () => {
-    try {
-      setIsLoading(true)
-      const response = await axios.get('/transactions', {
-        params: {
-          month: monthYear.month,
-          year: monthYear.year
-        }
-      })
-      
-      if (response.data.status === 'success') {
-        console.log('Fetched transactions:', response.data.data) // Debug log
-        setTransactions(response.data.data)
-        setFilteredTransactions(response.data.data)
-      }
-    } catch (error) {
-      console.error('Error fetching transactions:', error)
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Gagal memuat transaksi",
-        duration: 3000,
-      })
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  const fetchCategories = async () => {
-    try {
-      const response = await axios.get('/categories')
-      if (response.data.status === 'success') {
-        setCategories(response.data.data)
-      } else {
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: "Gagal memuat kategori",
-          duration: 3000,
-        })
-      }
-    } catch (error) {
-      console.error('Error fetching categories:', error)
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Gagal memuat kategori",
-        duration: 3000,
-      })
-    }
-  }
-
-  // Fetch data on component mount
-  useEffect(() => {
-    const init = async () => {
-      await fetchCategories()
-      await fetchTransactions()
-    }
-    init()
-  }, [])
-
-  // Refetch transactions when monthYear changes
-  useEffect(() => {
-    fetchTransactions()
-  }, [monthYear])
 
   // Calculate summary from all transactions, not filtered ones
   const summaryTotals = useMemo(() => {
@@ -201,7 +185,7 @@ export default function TransactionsPage() {
         duration: 3000,
       })
       
-      fetchTransactions() // Refresh data
+      fetchData() // Refresh data
     } catch (error) {
       toast({
         variant: "destructive",
@@ -386,6 +370,37 @@ export default function TransactionsPage() {
     }
   }
 
+  const handleDownload = async () => {
+    try {
+      const response = await axios.get(`/reports/download/${monthYear.month}`, {
+        params: { year: monthYear.year },
+        responseType: 'blob'
+      })
+      
+      const url = window.URL.createObjectURL(new Blob([response.data]))
+      const link = document.createElement('a')
+      link.href = url
+      link.setAttribute('download', `transaksi-${monthYear.month}-${monthYear.year}.pdf`)
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      
+      toast({
+        title: "Laporan diunduh",
+        description: `Laporan bulan ${monthYear.month} tahun ${monthYear.year} berhasil diunduh`,
+        duration: 3000,
+      })
+    } catch (error) {
+      console.error('Error downloading report:', error)
+      toast({
+        variant: "destructive", 
+        title: "Error",
+        description: "Gagal mengunduh laporan",
+        duration: 3000,
+      })
+    }
+  }
+
   const handleClearFilters = () => {
     setSearchQuery("")
     setCategoryFilter("")
@@ -498,9 +513,14 @@ export default function TransactionsPage() {
 
             <div className="flex gap-2">
               {/* Added Export button here */}
-              <Button variant="outline" size="icon" onClick={handleExport}>
+              <Button 
+                variant="outline" 
+                size="icon" 
+                onClick={handleDownload}
+                disabled={isLoading || displayTransactions.length === 0}
+              >
                 <Download className="h-4 w-4" />
-                <span className="sr-only">Ekspor</span>
+                <span className="sr-only">Unduh</span>
               </Button>
 
               <DropdownMenu>
@@ -616,14 +636,14 @@ export default function TransactionsPage() {
         open={isAddDialogOpen}
         onOpenChange={setIsAddDialogOpen}
         categories={categories}
-        onSuccess={fetchTransactions}
+        onSuccess={fetchData}
       />
       <TransactionDetailDialog 
         transaction={selectedTransaction}
         open={isDetailDialogOpen}
         onOpenChange={setIsDetailDialogOpen}
         categories={categories}
-        onSuccess={fetchTransactions}
+        onSuccess={fetchData}
       />
     </div>
   )

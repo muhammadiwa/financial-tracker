@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Download, Calendar } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -10,39 +10,94 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { formatCurrency } from "@/lib/utils"
 import { useToast } from "@/components/ui/use-toast"
 import { Breadcrumb } from "@/components/breadcrumb"
-
-// Sample data
-const monthlyReports = [
-  { id: "1", month: "Januari", year: "2023", income: 5000000, expense: 4200000 },
-  { id: "2", month: "Februari", year: "2023", income: 5200000, expense: 4500000 },
-  { id: "3", month: "Maret", year: "2023", income: 5500000, expense: 4800000 },
-  { id: "4", month: "April", year: "2023", income: 5300000, expense: 4600000 },
-  { id: "5", month: "Mei", year: "2023", income: 5700000, expense: 5000000 },
-  { id: "6", month: "Juni", year: "2023", income: 5900000, expense: 5200000 },
-]
+import axios from '@/lib/axios'
 
 export default function ReportsPage() {
-  // Get current year
   const currentYear = new Date().getFullYear()
-  
-  // Generate last 5 years automatically
   const years = useMemo(() => {
     return Array.from({length: 5}, (_, i) => currentYear - i)
   }, [currentYear])
 
   const [selectedYear, setSelectedYear] = useState(currentYear.toString())
+  const [reports, setReports] = useState([])
+  const [isLoading, setIsLoading] = useState(true)
   const router = useRouter()
   const { toast } = useToast()
 
-  const handleDownload = (id: string, month: string) => {
-    toast({
-      title: "Laporan diunduh",
-      description: `Laporan bulan ${month} berhasil diunduh`,
-    })
+  useEffect(() => {
+    fetchReports()
+  }, [selectedYear])
+
+  const fetchReports = async () => {
+    try {
+      setIsLoading(true)
+      const response = await axios.get('/reports/monthly', {
+        params: { year: selectedYear }
+      })
+      if (response.data.status === 'success') {
+        setReports(response.data.data)
+      }
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Gagal memuat data laporan",
+        duration: 3000,
+      })
+    } finally {
+      setIsLoading(false)
+    }
   }
 
-  const handleViewDetail = (id: string) => {
-    router.push(`/reports/${id}`)
+  const handleDownload = async (id: string, month: string) => {
+    try {
+      // Convert month name to month number
+      const monthNumber = new Date(`${month} 1, 2000`).getMonth() + 1;
+      
+      const response = await axios.get(`/reports/download/${monthNumber}`, {
+        params: { year: selectedYear },
+        responseType: 'blob'
+      })
+      
+      const url = window.URL.createObjectURL(new Blob([response.data]))
+      const link = document.createElement('a')
+      link.href = url
+      link.setAttribute('download', `report-${month}-${selectedYear}.pdf`)
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      
+      toast({
+        title: "Laporan diunduh",
+        description: `Laporan bulan ${month} berhasil diunduh`,
+        duration: 3000,
+      })
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Gagal mengunduh laporan",
+        duration: 3000,
+      })
+    }
+  }
+
+  const handleViewDetail = (id: string, month: string) => {
+    try {
+      // Convert month name to month number
+      const date = new Date(`${month} 1, ${selectedYear}`);
+      const monthNumber = (date.getMonth() + 1).toString().padStart(2, '0');
+      
+      // Use router.push with a URL string instead of object
+      router.push(`/transactions?month=${monthNumber}&year=${selectedYear}`);
+    } catch (error) {
+      console.error('Error navigating to transactions:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Gagal membuka detail transaksi",
+      });
+    }
   }
 
   return (
@@ -77,43 +132,57 @@ export default function ReportsPage() {
             <CardTitle className="text-lg">Laporan Bulanan {selectedYear}</CardTitle>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Bulan</TableHead>
-                  <TableHead className="text-right">Pemasukan</TableHead>
-                  <TableHead className="text-right">Pengeluaran</TableHead>
-                  <TableHead className="text-right">Saldo</TableHead>
-                  <TableHead className="text-right">Aksi</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {monthlyReports.map((report) => (
-                  <TableRow key={report.id}>
-                    <TableCell className="font-medium">{report.month}</TableCell>
-                    <TableCell className="text-right text-green-600 dark:text-green-400">
-                      {formatCurrency(report.income)}
-                    </TableCell>
-                    <TableCell className="text-right text-red-600 dark:text-red-400">
-                      {formatCurrency(report.expense)}
-                    </TableCell>
-                    <TableCell className="text-right">{formatCurrency(report.income - report.expense)}</TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end space-x-2">
-                        <Button variant="ghost" size="icon" onClick={() => handleViewDetail(report.id)}>
-                          <Calendar className="h-4 w-4" />
-                          <span className="sr-only">Detail</span>
-                        </Button>
-                        <Button variant="ghost" size="icon" onClick={() => handleDownload(report.id, report.month)}>
-                          <Download className="h-4 w-4" />
-                          <span className="sr-only">Unduh</span>
-                        </Button>
-                      </div>
-                    </TableCell>
+            {isLoading ? (
+              <div className="flex items-center justify-center h-[200px]">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Bulan</TableHead>
+                    <TableHead className="text-right">Pemasukan</TableHead>
+                    <TableHead className="text-right">Pengeluaran</TableHead>
+                    <TableHead className="text-right">Saldo</TableHead>
+                    <TableHead className="text-right">Aksi</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {reports.map((report) => (
+                    <TableRow key={report.id}>
+                      <TableCell className="font-medium">{report.month}</TableCell>
+                      <TableCell className="text-right text-green-600 dark:text-green-400">
+                        {formatCurrency(report.income)}
+                      </TableCell>
+                      <TableCell className="text-right text-red-600 dark:text-red-400">
+                        {formatCurrency(report.expense)}
+                      </TableCell>
+                      <TableCell className="text-right">{formatCurrency(report.balance)}</TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end space-x-2">
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            onClick={() => handleViewDetail(report.id, report.month)}
+                          >
+                            <Calendar className="h-4 w-4" />
+                            <span className="sr-only">Detail</span>
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            onClick={() => handleDownload(report.id, report.month)}
+                          >
+                            <Download className="h-4 w-4" />
+                            <span className="sr-only">Unduh</span>
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
           </CardContent>
         </Card>
       </main>

@@ -13,35 +13,38 @@ class TransactionController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Transaction::query()
-            ->with('category')
-            ->where('user_id', auth()->id());
+        try {
+            $query = Transaction::with('category')
+                ->where('user_id', auth()->id());
 
-        // Add month and year filtering
-        if ($request->has(['month', 'year'])) {
-            $query->whereYear('date', $request->year)
-                  ->whereMonth('date', $request->month);
+            if ($request->has(['month', 'year'])) {
+                $query->whereMonth('date', $request->month)
+                      ->whereYear('date', $request->year);
+            }
+
+            $transactions = $query->orderBy('date', 'desc')->get();
+
+            return response()->json([
+                'status' => 'success',
+                'data' => $transactions->map(function ($transaction) {
+                    return [
+                        'id' => $transaction->id,
+                        'amount' => $transaction->amount,
+                        'type' => $transaction->type,
+                        'description' => $transaction->description,
+                        'date' => $transaction->date,
+                        'category' => $transaction->category->name,
+                        'category_id' => $transaction->category_id,
+                        'color' => $transaction->category->color
+                    ];
+                })
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to fetch transactions'
+            ], 500);
         }
-
-        $transactions = $query->orderBy('date', 'desc')
-                             ->orderBy('created_at', 'desc')
-                             ->get();
-
-        return response()->json([
-            'status' => 'success',
-            'data' => $transactions->map(function ($transaction) {
-                return [
-                    'id' => $transaction->id,
-                    'description' => $transaction->description,
-                    'amount' => $transaction->amount,
-                    'type' => $transaction->type,
-                    'category' => $transaction->category->name,
-                    'category_id' => $transaction->category_id,
-                    'color' => $transaction->category->color,
-                    'date' => $transaction->date->format('Y-m-d'),
-                ];
-            })
-        ]);
     }
 
     public function store(Request $request)
