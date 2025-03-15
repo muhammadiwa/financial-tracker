@@ -610,7 +610,9 @@ export default function TransactionsPage() {
             Object.entries(groupTransactionsByDate(displayTransactions)).map(([date, transactions]) => (
               <div key={date} className="space-y-4">
                 <div className="sticky top-14 z-20 -mx-4 px-4 py-2 bg-muted/50 backdrop-blur-sm">
-                  <h2 className="text-sm font-medium text-muted-foreground">{date}</h2>
+                  <h2 className="text-sm font-medium text-muted-foreground">
+                    {format(new Date(date), 'EEEE, d MMMM yyyy', { locale: id })}
+                  </h2>
                 </div>
                 <div className="space-y-4">
                   {transactions.map((transaction) => (

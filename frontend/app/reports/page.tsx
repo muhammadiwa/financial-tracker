@@ -12,6 +12,14 @@ import { useToast } from "@/components/ui/use-toast"
 import { Breadcrumb } from "@/components/breadcrumb"
 import axios from '@/lib/axios'
 
+interface Report {
+  id: string;
+  month: string;
+  income: number;
+  expense: number;
+  balance: number;
+}
+
 export default function ReportsPage() {
   const currentYear = new Date().getFullYear()
   const years = useMemo(() => {
@@ -19,7 +27,7 @@ export default function ReportsPage() {
   }, [currentYear])
 
   const [selectedYear, setSelectedYear] = useState(currentYear.toString())
-  const [reports, setReports] = useState([])
+  const [reports, setReports] = useState<Report[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const router = useRouter()
   const { toast } = useToast()
@@ -136,7 +144,7 @@ export default function ReportsPage() {
               <div className="flex items-center justify-center h-[200px]">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
               </div>
-            ) : (
+            ) : reports.length > 0 ? (
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -182,6 +190,10 @@ export default function ReportsPage() {
                   ))}
                 </TableBody>
               </Table>
+            ) : (
+              <div className="text-center py-12">
+                <p className="text-muted-foreground">Belum ada laporan untuk tahun {selectedYear}</p>
+              </div>
             )}
           </CardContent>
         </Card>
