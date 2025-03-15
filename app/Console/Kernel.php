@@ -13,5 +13,7 @@ class Kernel extends ConsoleKernel
         $schedule->command('budgets:duplicate-monthly')
                 ->monthlyOn(1, '00:01')
                 ->runInBackground();
+
+        $schedule->command('reminders:daily-transactions')->everyMinute();
     }
 }

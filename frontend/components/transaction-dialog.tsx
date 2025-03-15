@@ -73,19 +73,6 @@ export function TransactionDialog({
         date,
       })
 
-      // If it's an expense, try to update budget
-      // if (type === "expense") {
-      //   try {
-      //     await axios.put(`/budgets/${category}/update-spent`, {
-      //       amount: Number(amount),
-      //       category_id: category
-      //     })
-      //   } catch (error) {
-      //     // If no matching budget found, just continue
-      //     console.log('No matching budget found for this category')
-      //   }
-      // }
-
       toast({
         title: "Transaksi berhasil ditambahkan",
         description: `${type === "income" ? "Pemasukan" : "Pengeluaran"} sebesar Rp${amount} telah dicatat.`,

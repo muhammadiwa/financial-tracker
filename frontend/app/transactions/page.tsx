@@ -437,7 +437,16 @@ export default function TransactionsPage() {
       </header>
 
       <main className="container px-4 py-6">
+      <div className="flex items-center justify-between mb-6">
         <Breadcrumb />
+        <Button 
+          onClick={() => setIsAddDialogOpen(true)}
+          className="hidden md:flex items-center gap-2"
+        >
+          <Plus className="h-4 w-4" />
+          Tambah Transaksi
+        </Button>
+      </div>
 
         {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
@@ -610,7 +619,9 @@ export default function TransactionsPage() {
             Object.entries(groupTransactionsByDate(displayTransactions)).map(([date, transactions]) => (
               <div key={date} className="space-y-4">
                 <div className="sticky top-14 z-20 -mx-4 px-4 py-2 bg-muted/50 backdrop-blur-sm">
-                  <h2 className="text-sm font-medium text-muted-foreground">{date}</h2>
+                  <h2 className="text-sm font-medium text-muted-foreground">
+                    {format(new Date(date), 'EEEE, d MMMM yyyy', { locale: id })}
+                  </h2>
                 </div>
                 <div className="space-y-4">
                   {transactions.map((transaction) => (

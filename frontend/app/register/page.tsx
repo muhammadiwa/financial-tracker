@@ -193,36 +193,6 @@ export default function RegisterPage() {
           </form>
         </CardContent>
         <CardFooter className="flex flex-col">
-          <div className="relative my-2 w-full">
-            <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t" />
-            </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-background px-2 text-muted-foreground">Atau daftar dengan</span>
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-4 mt-2 w-full">
-            <Button 
-              variant="outline" 
-              size="icon"
-              className="h-10 w-10 rounded-full"
-              onClick={handleGoogleRegister}
-              disabled={isLoading}
-            >
-              <Chrome className="h-4 w-4" />
-              <span className="sr-only">Daftar dengan Google</span>
-            </Button>
-            <Button 
-              variant="outline" 
-              size="icon"
-              className="h-10 w-10 rounded-full"
-              onClick={handleFacebookRegister}
-              disabled={isLoading}
-            >
-              <Facebook className="h-4 w-4" />
-              <span className="sr-only">Daftar dengan Facebook</span>
-            </Button>
-          </div>
           <div className="mt-4 text-center text-sm">
             Sudah punya akun?{" "}
             <Link href="/login" className="text-primary hover:underline">

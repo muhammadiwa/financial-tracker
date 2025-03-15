@@ -37,12 +37,6 @@ const navItems = [
     icon: PieChart,
   },
   {
-    name: "Tambah Transaksi",
-    href: "/add-transaction",
-    icon: Plus,
-    highlight: true,
-  },
-  {
     name: "Laporan",
     href: "/reports",
     icon: FileText,
@@ -106,7 +100,7 @@ export function Sidebar() {
       <Button
         variant="ghost"
         size="icon"
-        className="fixed top-3 left-4 z-50 lg:hidden"
+        className="fixed top-3 left-4 z-50 hidden"
         onClick={() => setIsMobileOpen(!isMobileOpen)}
       >
         {isMobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -152,12 +146,12 @@ export function Sidebar() {
                   pathname === item.href
                     ? "bg-primary text-primary-foreground"
                     : "text-muted-foreground hover:bg-muted hover:text-foreground",
-                  item.highlight && !isCollapsed && "bg-primary/10",
+                  'highlight' in item && !isCollapsed && "bg-primary/10",
                   isCollapsed && "justify-center",
                 )}
               >
                 <item.icon
-                  className={cn("h-5 w-5 transition-all", item.highlight && pathname !== item.href && "text-primary")}
+                  className={cn("h-5 w-5 transition-all", 'highlight' in item && pathname !== item.href && "text-primary")}
                 />
                 <span
                   className={cn(
@@ -168,8 +162,7 @@ export function Sidebar() {
                   {item.name}
                 </span>
               </Link>
-            ))}
-          </nav>
+            ))}          </nav>
 
           {/* Footer */}
           <div className="p-4 border-t mt-auto">

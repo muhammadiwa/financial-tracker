@@ -72,14 +72,17 @@ class TransactionController extends Controller
                 ->first();
 
             if (!$matchingBudget) {
-                $matchingBudget = Budget::create([
-                    'user_id' => auth()->id(),
-                    'category_id' => $validatedData['category_id'],
-                    'amount' => 0,
-                    'spent' => $validatedData['amount'],
-                    'month' => now()->month,
-                    'year' => now()->year,
-                ]);
+                // Only update spent if it's an expense
+                if ($validatedData['type'] === 'expense') {
+                    $matchingBudget = Budget::create([
+                        'user_id' => auth()->id(),
+                        'category_id' => $validatedData['category_id'],
+                        'amount' => 0,
+                        'spent' => $validatedData['amount'],
+                        'month' => now()->month,
+                        'year' => now()->year,
+                    ]);
+                }
             } else {
                 // Only update spent if it's an expense
                 if ($validatedData['type'] === 'expense') {
