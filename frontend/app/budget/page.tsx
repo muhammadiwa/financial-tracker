@@ -29,7 +29,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Progress } from "@/components/ui/progress"
 import { Breadcrumb } from "@/components/breadcrumb"
-import { formatCurrency } from "@/lib/utils"
+import { formatCurrency, cn } from "@/lib/utils"
 import { useToast } from "@/components/ui/use-toast"
 import { HeaderMenu } from "@/components/header-menu"
 import axios from '@/lib/axios'
@@ -362,10 +362,14 @@ export default function BudgetPage() {
               </div>
             </div>
 
-            <Progress
-              value={totalPercentage > 100 ? 100 : totalPercentage}
-              className={`h-3 ${totalPercentage > 90 ? "bg-red-500" : totalPercentage > 75 ? "bg-yellow-500" : "bg-green-500"}`}
-            />
+            <div className="h-3 w-full bg-green-500 rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-red-500 transition-all"
+                style={{ 
+                  width: `${totalPercentage > 100 ? 100 : totalPercentage}%` 
+                }}
+              />
+            </div>
 
             {totalPercentage > 90 && (
               <div className="flex items-center mt-4 p-3 bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 rounded-md">
@@ -448,19 +452,20 @@ export default function BudgetPage() {
                     </div>
                     <Progress
                       value={percentage > 100 ? 100 : percentage}
-                      className={`h-2 ${
-                        isOverBudget ? "bg-red-500" : percentage > 75 ? "bg-yellow-500" : "bg-green-500"
+                      className="h-2"
+                      style={{
+                        '--progress-background': budget.color,
+                      } as React.CSSProperties}
+                      // Add custom styles to override the progress bar color
+                      indicatorClassName={`transition-all ${
+                        isOverBudget ? "bg-red-500" : `bg-[var(--progress-background)]`
                       }`}
                     />
                     <div className="flex justify-between items-center text-xs">
                       <span
-                        className={`${
-                          isOverBudget
-                            ? "text-red-600 dark:text-red-400"
-                            : percentage > 75
-                              ? "text-yellow-600 dark:text-yellow-400"
-                              : "text-green-600 dark:text-green-400"
-                        }`}
+                        style={{ 
+                          color: isOverBudget ? 'rgb(220, 38, 38)' : budget.color 
+                        }}
                       >
                         {percentage.toFixed(0)}%
                       </span>

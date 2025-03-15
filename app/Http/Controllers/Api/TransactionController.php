@@ -69,15 +69,21 @@ class TransactionController extends Controller
                 ->first();
 
             if (!$matchingBudget) {
-                return response()->json([
-                    'status' => 'success',
-                    'message' => 'No matching budget found for this category'
+                $matchingBudget = Budget::create([
+                    'user_id' => auth()->id(),
+                    'category_id' => $validatedData['category_id'],
+                    'amount' => 0,
+                    'spent' => $validatedData['amount'],
+                    'month' => now()->month,
+                    'year' => now()->year,
                 ]);
+            } else {
+                // Only update spent if it's an expense
+                if ($validatedData['type'] === 'expense') {
+                    $matchingBudget->spent += $validatedData['amount'];
+                    $matchingBudget->save();
+                }
             }
-
-            // Update spent amount
-            $matchingBudget->spent += $validatedData['amount'];
-            $matchingBudget->save();
 
             DB::commit();
 
