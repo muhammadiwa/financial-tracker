@@ -11,6 +11,9 @@ use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules\Password;
 use Google_Client;
+use Illuminate\Auth\Events\PasswordReset;
+use App\Notifications\ResetPasswordNotification;
+use Illuminate\Support\Facades\Password as PasswordBroker;  // Update the import
 
 class AuthController extends Controller
 {
@@ -254,6 +257,106 @@ class AuthController extends Controller
             return response()->json([
                 'status' => 'error',
                 'message' => 'Terjadi kesalahan saat login dengan Google'
+            ], 500);
+        }
+    }
+
+    public function forgotPassword(Request $request)
+    {
+        \Log::info('Forgot password attempt', ['email' => $request->email]);
+
+        $request->validate([
+            'email' => ['required', 'email', 'exists:users,email'],
+        ]);
+
+        try {
+            $user = User::where('email', $request->email)->first();
+            
+            // Generate token
+            $token = PasswordBroker::createToken($user);
+            
+            // Send notification with token and email
+            $user->notify(new ResetPasswordNotification($token, $user->email));
+
+            \Log::info('Reset password link sent', [
+                'email' => $request->email
+            ]);
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Link reset password telah dikirim ke email Anda'
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Forgot password error', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Gagal mengirim email reset password'
+            ], 500);
+        }
+    }
+
+    public function resetPassword(Request $request)
+    {
+        \Log::info('Reset password attempt', $request->all());
+        
+        $request->validate([
+            'token' => ['required'],
+            'email' => ['required', 'email'],
+            'password' => [
+                'required',
+                'confirmed',
+                Password::min(8)
+                    ->mixedCase()
+                    ->numbers()
+                    ->symbols()
+            ],
+        ]);
+
+        try {
+            // Use PasswordBroker instead of Password
+            $status = PasswordBroker::reset(
+                $request->only('email', 'password', 'password_confirmation', 'token'),
+                function ($user, $password) {
+                    $user->forceFill([
+                        'password' => Hash::make($password),
+                        'remember_token' => Str::random(60),
+                    ])->save();
+
+                    event(new PasswordReset($user));
+
+                    // Revoke all tokens
+                    $user->tokens()->delete();
+                }
+            );
+
+            \Log::info('Reset password status', ['status' => $status]);
+
+            if ($status === PasswordBroker::PASSWORD_RESET) {
+                return response()->json([
+                    'status' => 'success',
+                    'message' => 'Password berhasil direset'
+                ]);
+            }
+
+            return response()->json([
+                'status' => 'error',
+                'message' => trans($status)
+            ], 400);
+
+        } catch (\Exception $e) {
+            \Log::error('Reset password error', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Gagal mereset password'
             ], 500);
         }
     }
