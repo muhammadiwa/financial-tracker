@@ -75,75 +75,51 @@ class AuthController extends Controller
             'token' => $token
         ]);
     }
+
     public function socialLogin(Request $request, $provider)
     {
         try {
             $socialToken = $request->input('access_token');
-            $idToken = $request->input('id_token'); // Add support for ID token
             
-            // Handle different token types
-            if ($idToken && $provider === 'google') {
-                // For Google Sign-In using ID tokens
-                $payload = $this->verifyGoogleIdToken($idToken);
-                if (!$payload) {
-                    return response()->json([
-                        'status' => 'error',
-                        'message' => 'Invalid Google ID token'
-                    ], 400);
-                }
-                
-                $email = $payload['email'];
-                $name = $payload['name'];
-                $providerId = $payload['sub'];
-                
-            } else if ($socialToken) {
-                // Traditional OAuth flow with access token
-                $socialUser = Socialite::driver($provider)->stateless()->userFromToken($socialToken);
-                $email = $socialUser->getEmail();
-                $name = $socialUser->getName();
-                $providerId = $socialUser->getId();
-            } else {
+            if (!$socialToken) {
                 return response()->json([
                     'status' => 'error',
-                    'message' => 'No valid token provided'
+                    'message' => 'Access token tidak ditemukan'
                 ], 400);
             }
-            
-            // Find user by email
-            $user = User::where('email', $email)->first();
-            
-            // If user doesn't exist, create a new account
-            if (!$user) {
-                $user = User::create([
-                    'name' => $name,
-                    'email' => $email,
-                    'password' => Hash::make(Str::random(24)),
-                    'provider' => $provider,
-                    'provider_id' => $providerId,
-                ]);
-                
-                // Create default categories for new user via Observer
-            } else {
-                // Update provider info if user exists but logged in with social for the first time
-                if (!$user->provider) {
-                    $user->provider = $provider;
-                    $user->provider_id = $providerId;
-                    $user->save();
-                }
-            }
 
-            $token = $user->createToken('auth_token')->plainTextToken;
+            $socialUser = Socialite::driver($provider)->stateless()->userFromToken($socialToken);
+            
+            // Cari atau buat user baru
+            $user = User::updateOrCreate(
+                ['email' => $socialUser->getEmail()],
+                [
+                    'name' => $socialUser->getName(),
+                    'provider' => $provider,
+                    'provider_id' => $socialUser->getId(),
+                    'password' => Hash::make(Str::random(24))
+                ]
+            );
+
+            // Generate token
+            $token = $user->createToken('auth-token')->plainTextToken;
 
             return response()->json([
                 'status' => 'success',
-                'message' => $user->wasRecentlyCreated ? 'Akun baru dibuat' : 'Login berhasil',
+                'message' => 'Login berhasil',
                 'user' => $user,
                 'token' => $token
             ]);
+
         } catch (\Exception $e) {
+            \Log::error('Social login error:', [
+                'provider' => $provider,
+                'error' => $e->getMessage()
+            ]);
+
             return response()->json([
                 'status' => 'error',
-                'message' => 'Social login failed: ' . $e->getMessage()
+                'message' => 'Gagal login dengan ' . ucfirst($provider)
             ], 500);
         }
     }
