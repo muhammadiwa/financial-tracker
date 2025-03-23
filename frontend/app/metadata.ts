@@ -22,7 +22,7 @@ export const metadata: Metadata = {
   ],
   authors: [{ name: 'Muhammad Iwa' }],
   creator: 'Muhammad Iwa',
-  publisher: 'Your Company',
+  publisher: 'Technova Solutions',
   formatDetection: {
     email: false,
     address: false,

@@ -8,6 +8,9 @@ const config = {
     "./app/**/*.{ts,tsx}",
     "./src/**/*.{ts,tsx}",
     "*.{js,ts,jsx,tsx,mdx}",
+    './pages/**/*.{js,ts,jsx,tsx,mdx}',
+    './components/**/*.{js,ts,jsx,tsx,mdx}',
+    './app/**/*.{js,ts,jsx,tsx,mdx}',
   ],
   theme: {
     container: {
@@ -52,6 +55,30 @@ const config = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        'navy': {
+          50: '#f0f5ff',
+          100: '#e5edff',
+          200: '#cdd8ff',
+          300: '#a6b9ff',
+          400: '#7a8eff',
+          500: '#5161ff',
+          600: '#303bfc',
+          700: '#272dda',
+          800: '#1f2452', // Main navy color
+          900: '#1b2142',
+        },
+        'teal': {
+          50: '#f0fdfa',
+          100: '#ccfbef',
+          200: '#99f6e1',
+          300: '#5eead4',
+          400: '#2dd4bf',
+          500: '#14b8a6', // Main teal color
+          600: '#0d9488',
+          700: '#0f766e',
+          800: '#115e59',
+          900: '#134e4a',
+        },
       },
       borderRadius: {
         lg: "var(--radius)",
@@ -71,6 +98,12 @@ const config = {
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
+      },
+      boxShadow: {
+        'glass': '0 8px 32px 0 rgba(31, 38, 135, 0.07)',
+      },
+      backdropBlur: {
+        'glass': '10px',
       },
     },
   },

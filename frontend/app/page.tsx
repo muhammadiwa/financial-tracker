@@ -1,8 +1,30 @@
-import { redirect } from "next/navigation"
+"use client"
+
+import { Navbar } from '@/components/ui/navbar'
+import { Footer } from '@/components/ui/footer'
+import { LiveChat } from '@/components/ui/live-chat'
+import { HeroSection } from '@/components/landing/hero-section'
+import { FeaturesSection } from '@/components/landing/features-section'
+import { StatsSection } from '@/components/landing/stats-section'
+import { TestimonialsSection } from '@/components/landing/testimonials'
+import { PricingSection } from '@/components/landing/pricing-section'
+import { FaqSection } from '@/components/landing/faq-section'
+import { CtaSection } from '@/components/landing/cta-section'
 
 export default function Home() {
-  // Redirect to dashboard if authenticated, otherwise to login
-  // For now, we'll just redirect to login
-  redirect("/login")
+  return (
+    <main>
+      <Navbar />
+      <HeroSection />
+      <FeaturesSection />
+      <StatsSection />
+      <TestimonialsSection />
+      <PricingSection />
+      <FaqSection />
+      <CtaSection />
+      <Footer />
+      <LiveChat />
+    </main>
+  )
 }
 
